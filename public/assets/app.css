@@ -2192,3 +2192,8 @@ body.wg-body{overflow:hidden}
 .off-card .mark{display:grid;place-items:center;width:64px;height:64px;border-radius:18px;background:var(--surface-2)}
 .off-card .off-t .th{font-size:22px;font-weight:700}.off-card .off-t{display:flex;flex-direction:column;align-items:center}
 .off-card p{margin:0}.off-card .btn{margin-top:8px;min-width:160px}
+/* team gate (web) */
+.tg-f{display:flex;flex-direction:column;gap:10px;width:100%;margin-top:4px}
+.tg-f .input{height:56px;text-align:center;font-size:18px;letter-spacing:.08em}
+.tg-f .err-text{min-height:18px;font-size:13px}
+.tg-f .btn{margin-top:0;width:100%;height:52px}

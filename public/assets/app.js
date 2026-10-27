@@ -47,6 +47,7 @@ async function api(name, ...args) {
     if ('name' in res.ctx) localStorageSet('officerName', res.ctx.name || '');
   }
   if (!API_READS.has(name) && typeof App !== 'undefined') App._dash = null;   // any write → next dashboard is fresh
+  if (res.need_login && IS_WEB) { TeamGate.show(); const e = new Error(res.error || 'กรุณาใส่รหัสทีม'); e.needLogin = true; throw e; }
   if (!res.ok) throw new Error(res.error || 'เกิดข้อผิดพลาด');
   return res.data;
 }
@@ -71,6 +72,35 @@ function downloadB64(b64, name, mime) {
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
 }
+
+/* ---------------- team gate (Vercel web app: team password → 30-day cookie, checked by the /api proxy) ---------------- */
+const TeamGate = {
+  shown: false,
+  show() {
+    if (this.shown) return; this.shown = true;
+    const w = document.body.dataset.view === 'widget';
+    document.getElementById('root').innerHTML = `<div class="setup"><div class="card off-card tg-card">
+      <span class="mark">${typeof art === 'function' ? art('logo', 44) : ''}</span>
+      <div class="off-t">${bi('HRM STOCK', 'ระบบควบคุมและจัดการสต็อก HRM')}</div>
+      <p class="muted">ใส่รหัสทีมเพื่อเข้าใช้งาน${w ? ' Widget' : ''}</p>
+      <form class="tg-f" autocomplete="on"><input class="input" id="tg-code" type="password" autocomplete="current-password" placeholder="รหัสทีม" aria-label="รหัสทีม" required>
+      <div class="err-text" id="tg-err" role="alert"></div>
+      <button class="btn btn-primary" type="submit" id="tg-go">${ic('lock', 'sm')}เข้าสู่ระบบ</button></form>
+      <p class="hint">เครื่องนี้จะจำไว้ 30 วัน · ขอรหัสได้จากหัวหน้าทีมหรือ Officer</p></div></div>`;
+    const inp = document.getElementById('tg-code'), err = document.getElementById('tg-err'), go = document.getElementById('tg-go');
+    setTimeout(() => inp.focus(), 50);
+    document.querySelector('.tg-f').onsubmit = async ev => {
+      ev.preventDefault(); err.textContent = ''; go.disabled = true; go.classList.add('busy');
+      try {
+        const r = await (await fetch('/api/team_login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: inp.value }) })).json();
+        if (r.ok) { location.reload(); return; }
+        err.textContent = r.error || 'เข้าสู่ระบบไม่สำเร็จ'; inp.select();
+      } catch (e) { err.textContent = 'เชื่อมต่อไม่ได้ — ตรวจสอบอินเทอร์เน็ต'; }
+      go.disabled = false; go.classList.remove('busy');
+    };
+  },
+  async logout() { try { await fetch('/api/team_logout', { method: 'POST', body: '{}' }); } catch (e) { } location.reload(); },
+};
 
 /* ---------------- format ---------------- */
 const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -346,7 +376,7 @@ const App = {
     window.addEventListener('online', () => location.reload(), { once: true });
   },
   async start() {
-    try { this.info = await api('app_info'); } catch (e) { this.info = { ready: false, error: e.message }; }
+    try { this.info = await api('app_info'); } catch (e) { if (e.needLogin) return; this.info = { ready: false, error: e.message }; }
     if (!this.info.ready && IS_GAS) return this.offline(this.info.error);   // Google / web: nothing to set up — the server is just unreachable
     if (!this.info.ready) return Setup.show(1);
     if (typeof Widget !== 'undefined' && Widget.want() && this.info.has_data) return Widget.start();   // desktop widget window
@@ -2107,7 +2137,7 @@ PAGES.settings = {
       ${typeof HistImport !== 'undefined' ? HistImport.card() : ''}
       ${typeof BackupUI !== 'undefined' ? BackupUI.card() : ''}
       ${typeof ResetUI !== 'undefined' ? ResetUI.card() : ''}
-      <section class="card" style="${info.role === 'officer' ? '' : 'grid-column:1/-1'}"><div class="card-h">${tile('clock', 'var(--fg-2)', 'sm')}<div class="title">${bi('ประวัติการใช้งาน', 'Activity log')}</div><span class="grow"></span><span class="faint" style="font-size:12px">v${esc(info.version)}</span></div>
+      <section class="card" style="${info.role === 'officer' ? '' : 'grid-column:1/-1'}"><div class="card-h">${tile('clock', 'var(--fg-2)', 'sm')}<div class="title">${bi('ประวัติการใช้งาน', 'Activity log')}</div><span class="grow"></span>${IS_WEB ? `<button class="btn btn-ghost sm" data-tglogout title="ออกจากระบบทีมบนเครื่องนี้ — ต้องใส่รหัสทีมใหม่">${ic('lock', 'sm')}ออกจากระบบ</button>` : ''}<span class="faint" style="font-size:12px">v${esc(info.version)}</span></div>
         <div style="max-height:360px;overflow:auto">${audit.map(a => `<div class="audit-row"><span class="faint num">${esc(a.at.slice(5, 16))}</span><span style="font-weight:700">${esc(a.who || a.machine || '')}</span><span class="muted">${esc(a.action)} · ${esc(a.detail || '')}</span></div>`).join('') || emptyState('clock', 'ยังไม่มีประวัติ', 'No activity')}</div></section>
     </div>`;
     el.querySelector('#role').onclick = async e => {
@@ -2120,6 +2150,7 @@ PAGES.settings = {
     if (typeof People !== 'undefined') People.bindCard(el, () => this.render(el));
     if (typeof Shift !== 'undefined') Shift.bindCard(el, () => this.render(el));
     if (typeof LineUI !== 'undefined') LineUI.bind(el);
+    el.querySelector('[data-tglogout]')?.addEventListener('click', () => TeamGate.logout());
     if (typeof HistImport !== 'undefined') HistImport.bind(el);
     if (typeof ResetUI !== 'undefined') ResetUI.bind(el);
     if (typeof BackupUI !== 'undefined') BackupUI.bind(el);

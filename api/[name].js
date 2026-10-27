@@ -1,8 +1,43 @@
 /* HRM STOCK · Vercel API proxy
    Browser → POST /api/<name> {args, ctx} → backend → {ok, data, error, ctx}
    BACKEND=gas      : forwards to the Google Apps Script web app (GAS_URL) with the shared key (GAS_KEY = Script Property WEB_KEY)
-   BACKEND=supabase : planned (phase 2) */
+   BACKEND=supabase : planned (phase 2)
+   TEAM_CODE        : team password — every data call needs the signed cookie from POST /api/team_login (30 days) */
+const crypto = require('crypto');
 const NAME_RE = /^[a-z][a-z0-9_]{0,48}$/;
+const COOKIE = 'hrm_team', DAYS = 30;
+
+/* ---------- team gate ---------- */
+const teamCode = () => String(process.env.TEAM_CODE || '').trim();
+function sign(exp) {   // changing TEAM_CODE (or GAS_KEY) signs everyone out
+  return crypto.createHmac('sha256', String(process.env.GAS_KEY || '') + '|' + teamCode()).update('team:' + exp).digest('base64url');
+}
+function readCookie(req) {
+  const m = String(req.headers.cookie || '').match(new RegExp('(?:^|;\\s*)' + COOKIE + '=([^;]+)'));
+  return m ? decodeURIComponent(m[1]) : '';
+}
+function signedIn(req) {
+  if (!teamCode()) return true;   // gate off until TEAM_CODE is set
+  const [exp, sig] = readCookie(req).split('.');
+  if (!exp || !sig || !/^\d+$/.test(exp) || +exp < Date.now()) return false;
+  const a = Buffer.from(sig), b = Buffer.from(sign(exp));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+function setCookie(res, value, maxAge) {
+  res.setHeader('Set-Cookie', `${COOKIE}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`);
+}
+async function teamLogin(req, res, body) {
+  const code = teamCode(), given = String(body.code || '').trim();
+  if (!code) return res.status(200).send(JSON.stringify({ ok: true, data: { gate: false } }));
+  const a = crypto.createHash('sha256').update(given).digest(), b = crypto.createHash('sha256').update(code).digest();
+  if (!given || !crypto.timingSafeEqual(a, b)) {
+    await new Promise(r => setTimeout(r, 1200));   // slow down guessing
+    return res.status(200).send(JSON.stringify({ ok: false, error: 'รหัสทีมไม่ถูกต้อง' }));
+  }
+  const exp = Date.now() + DAYS * 864e5;
+  setCookie(res, exp + '.' + sign(exp), DAYS * 86400);
+  return res.status(200).send(JSON.stringify({ ok: true, data: { gate: true, days: DAYS } }));
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -13,6 +48,9 @@ module.exports = async function handler(req, res) {
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
   body = body || {};
+  if (name === 'team_login') return teamLogin(req, res, body);
+  if (name === 'team_logout') { setCookie(res, '', 0); return res.status(200).send(JSON.stringify({ ok: true, data: true })); }
+  if (!signedIn(req)) return res.status(200).send(JSON.stringify({ ok: false, need_login: true, error: 'กรุณาใส่รหัสทีม' }));
   const backend = (process.env.BACKEND || 'gas').toLowerCase();
   try {
     if (backend === 'gas') return res.status(200).send(await viaGas(name, body, req));
