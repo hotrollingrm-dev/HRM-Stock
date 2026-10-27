@@ -9,8 +9,14 @@ const COOKIE = 'hrm_team', DAYS = 30;
 
 /* ---------- team gate ---------- */
 const teamCode = () => String(process.env.TEAM_CODE || '').trim();
-function sign(exp) {   // changing TEAM_CODE (or GAS_KEY) signs everyone out
-  return crypto.createHmac('sha256', String(process.env.GAS_KEY || '') + '|' + teamCode()).update('team:' + exp).digest('base64url');
+function sign(exp, kind = 'team') {   // changing TEAM_CODE (or GAS_KEY) signs everyone out and voids every QR
+  return crypto.createHmac('sha256', String(process.env.GAS_KEY || '') + '|' + teamCode()).update(kind + ':' + exp).digest('base64url');
+}
+function validSig(tok, kind) {
+  const [exp, sig] = String(tok || '').split('.');
+  if (!exp || !sig || !/^\d{10,15}$/.test(exp) || +exp < Date.now()) return false;
+  const a = Buffer.from(sig), b = Buffer.from(sign(exp, kind));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 function readCookie(req) {
   const m = String(req.headers.cookie || '').match(new RegExp('(?:^|;\\s*)' + COOKIE + '=([^;]+)'));
@@ -18,10 +24,7 @@ function readCookie(req) {
 }
 function signedIn(req) {
   if (!teamCode()) return true;   // gate off until TEAM_CODE is set
-  const [exp, sig] = readCookie(req).split('.');
-  if (!exp || !sig || !/^\d+$/.test(exp) || +exp < Date.now()) return false;
-  const a = Buffer.from(sig), b = Buffer.from(sign(exp));
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+  return validSig(readCookie(req), 'team');
 }
 function setCookie(res, value, maxAge) {
   res.setHeader('Set-Cookie', `${COOKIE}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`);
@@ -29,6 +32,12 @@ function setCookie(res, value, maxAge) {
 async function teamLogin(req, res, body) {
   const code = teamCode(), given = String(body.code || '').trim();
   if (!code) return res.status(200).send(JSON.stringify({ ok: true, data: { gate: false } }));
+  if (body.join) {   // QR "เข้าได้เลย": signed invite instead of the code
+    if (!validSig(body.join, 'invite')) return res.status(200).send(JSON.stringify({ ok: false, error: 'QR นี้หมดอายุหรือถูกยกเลิกแล้ว — ขอ QR ใหม่จาก Officer หรือใส่รหัสทีม' }));
+    const exp = Date.now() + DAYS * 864e5;
+    setCookie(res, exp + '.' + sign(exp), DAYS * 86400);
+    return res.status(200).send(JSON.stringify({ ok: true, data: { gate: true, days: DAYS } }));
+  }
   const a = crypto.createHash('sha256').update(given).digest(), b = crypto.createHash('sha256').update(code).digest();
   if (!given || !crypto.timingSafeEqual(a, b)) {
     await new Promise(r => setTimeout(r, 1200));   // slow down guessing
@@ -51,6 +60,7 @@ module.exports = async function handler(req, res) {
   if (name === 'team_login') return teamLogin(req, res, body);
   if (name === 'team_logout') { setCookie(res, '', 0); return res.status(200).send(JSON.stringify({ ok: true, data: true })); }
   if (!signedIn(req)) return res.status(200).send(JSON.stringify({ ok: false, need_login: true, error: 'กรุณาใส่รหัสทีม' }));
+  if (name === 'team_invite') return teamInvite(req, res, body);
   const backend = (process.env.BACKEND || 'gas').toLowerCase();
   try {
     if (backend === 'gas') return res.status(200).send(await viaGas(name, body, req));
@@ -60,6 +70,17 @@ module.exports = async function handler(req, res) {
     return res.status(502).send(JSON.stringify({ ok: false, error: 'เชื่อมต่อ Google ไม่ได้ — ลองใหม่อีกครั้ง' }));
   }
 };
+
+/** Officer: a signed link that signs a phone in without the code (QR) — void when TEAM_CODE changes */
+async function teamInvite(req, res, body) {
+  const host = req.headers['x-forwarded-host'] || req.headers.host || '', base = 'https://' + host + '/';
+  if (!teamCode()) return res.status(200).send(JSON.stringify({ ok: true, data: { gate: false, url: base } }));
+  const info = JSON.parse(await viaGas('app_info', { args: [], ctx: body.ctx || {} }, req));
+  if (!info.ok || !info.data || info.data.role !== 'officer') return res.status(200).send(JSON.stringify({ ok: false, error: 'เฉพาะ Officer เท่านั้นที่สร้าง QR เข้าได้เลย' }));
+  const days = Math.max(1, Math.min(365, Math.round(Number((body.args || [])[0]) || 30)));
+  const exp = Date.now() + days * 864e5;
+  return res.status(200).send(JSON.stringify({ ok: true, data: { gate: true, days, exp, url: base + '?join=' + exp + '.' + sign(exp, 'invite') } }));
+}
 
 async function viaGas(name, body, req) {
   const url = process.env.GAS_URL, key = process.env.GAS_KEY;
