@@ -89,15 +89,28 @@ const TeamGate = {
   },
   show(msg) {
     if (this.shown) return; this.shown = true;
-    const w = document.body.dataset.view === 'widget';
-    document.getElementById('root').innerHTML = `<div class="setup"><div class="card off-card tg-card">
-      <span class="mark">${typeof art === 'function' ? art('logo', 44) : ''}</span>
-      <div class="off-t">${bi('HRM STOCK', 'ระบบควบคุมและจัดการสต็อก HRM')}</div>
-      <p class="muted">ใส่รหัสทีมเพื่อเข้าใช้งาน${w ? ' Widget' : ''}</p>
-      <form class="tg-f" autocomplete="on"><input class="input" id="tg-code" type="password" autocomplete="current-password" placeholder="รหัสทีม" aria-label="รหัสทีม" required>
-      <div class="err-text" id="tg-err" role="alert">${msg ? esc(msg) : ''}</div>
-      <button class="btn btn-primary" type="submit" id="tg-go">${ic('lock', 'sm')}เข้าสู่ระบบ</button></form>
-      <p class="hint">เครื่องนี้จะจำไว้ 30 วัน · ขอรหัสได้จากหัวหน้าทีมหรือ Officer</p></div></div>`;
+    const w = document.body.dataset.view === 'widget', now = new Date();
+    const EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (!document.documentElement.getAttribute('data-skin')) document.documentElement.setAttribute('data-skin', 'rose');   // the gate always wears the reference look
+    document.getElementById('root').innerHTML = `<div class="tg2 ${w ? 'w' : ''}">
+      <div class="tg2-l">
+        <form class="tg2-glass tg-f" autocomplete="on">
+          <div class="tg2-top"><span class="tg2-mark">${typeof art === 'function' ? art('logo', 26) : ''}</span><span class="tg2-pill">HRM STOCK</span></div>
+          <h1>เข้าสู่ระบบ<small>Log in</small></h1>
+          <label class="tg2-in"><i>${ic('lock', 'sm')}</i><input id="tg-code" type="password" autocomplete="current-password" placeholder="รหัสทีม" aria-label="รหัสทีม" required></label>
+          <div class="err-text" id="tg-err" role="alert">${msg ? esc(msg) : ''}</div>
+          <div class="tg2-go"><p>ใส่รหัสทีมครั้งเดียว เครื่องนี้จะจำไว้ 30 วัน · ขอรหัสได้จากหัวหน้าทีมหรือ Officer</p>
+            <button type="submit" id="tg-go" aria-label="เข้าสู่ระบบ"><span>เข้าสู่ระบบ</span><b>${ic('arrowR', 'sm')}</b></button></div>
+        </form>
+        <div class="tg2-ink"><b>Stock Control</b><span>ระบบควบคุมและจัดการสต็อก HRM</span><em>UACJ · Hot Rolling Mill</em></div>
+      </div>
+      <div class="tg2-white">
+        <div class="tg2-date"><b>${EN[now.getMonth()]}</b><span>${now.getFullYear()}</span>
+          <small>${TH_WD[now.getDay()]} ${now.getDate()}<br>${TH_MF[now.getMonth()]} ${now.getFullYear() + 543}</small></div>
+        <div class="tg2-orb"></div>
+        <div class="tg2-side"><span>Minimal</span><span>Stock · Order · Delivery</span></div>
+        <div class="tg2-foot"><span class="tg2-brand">${typeof art === 'function' ? art('logo', 22) : ''}HRM STOCK</span></div>
+      </div></div>`;
     const inp = document.getElementById('tg-code'), err = document.getElementById('tg-err'), go = document.getElementById('tg-go');
     setTimeout(() => inp.focus(), 50);
     document.querySelector('.tg-f').onsubmit = async ev => {
@@ -8064,9 +8077,16 @@ const Skin = {
   role() { return App.officer ? 'officer' : 'operator'; },
   dark() { const t = document.documentElement.getAttribute('data-theme'); return t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches); },
   _preview: null,
+  /** Operator skin may follow today's day-shift team (ทีม A/B/C each have their own look) */
+  teamToday() { return typeof Shift !== 'undefined' ? (Shift.teamOn(App.today) || '').charAt(0) : ''; },
+  resolve(cfg, role) {
+    const r = (cfg && cfg[role]) || {};
+    if (role === 'operator' && r.by_team) { const t = this.teamToday(), ts = (cfg.teams || {})[t]; if (t && ts) return { id: ts.id || '' }; }
+    return r;
+  },
   /** apply the skin for the current role (or a preview) — skins are a light-mode look */
   apply(over) {
-    const root = document.documentElement, s = over || this._preview || this.cfg()[this.role()] || {};
+    const root = document.documentElement, s = over || (this._preview ? this.resolve(this._preview, this.role()) : this.resolve(this.cfg(), this.role()));
     ['--primary', '--primary-soft', '--on-primary', '--bg'].forEach(k => root.style.removeProperty(k));
     if (this.dark()) { root.removeAttribute('data-skin'); return; }
     if (s.id) root.setAttribute('data-skin', s.id); else root.removeAttribute('data-skin');
@@ -8087,33 +8107,43 @@ const Skin = {
   /* ---------------- Settings card ---------------- */
   card() {
     const ed = App.officer, cfg = this.cfg();
-    this._draft = this._draft || JSON.parse(JSON.stringify({ operator: cfg.operator || {}, officer: cfg.officer || {} }));
+    this._draft = this._draft || JSON.parse(JSON.stringify({ operator: cfg.operator || {}, officer: cfg.officer || {}, teams: cfg.teams || {} }));
+    ['A', 'B', 'C'].forEach(t => { this._draft.teams[t] = this._draft.teams[t] || { id: '' }; });
     const d = this._draft, me = this.role();
     const col = (role, th, en) => {
       const cur = d[role] || {}, m = this.meta(cur.id);
       const sw = SKINS.map(k => `<button class="sk-sw ${(cur.id || '') === k.id ? 'on' : ''}" data-sk="${role}:${k.id}" style="--sk-a:${k.a};--sk-bg:${k.bg}" ${ed ? '' : 'disabled'} title="${esc(k.th)} · ${k.en}">
-          <span class="sk-pv" style="background:${k.pv},${k.bg}"><b></b><i></i></span><span>${esc(k.th)}<small>${k.en}</small></span></button>`).join('');
+          <span class="sk-pv" data-p="${k.id}"><b></b><i></i></span><span>${esc(k.th)}<small>${k.en}</small></span></button>`).join('');
       return `<div class="sk-col ${role === me ? 'cur' : ''}"><h4>${role === 'officer' ? ic('shield', 'sm') : ic('user', 'sm')}${th} <span class="en">${en}</span>${role === me ? '<span class="sk-cur">เครื่องนี้ใช้อยู่</span>' : ''}</h4>
         <div class="sk-list">${sw}</div>
         <div class="sk-cust"><span>ปรับสีเอง:</span>
           <label>${'<input type="color" data-skc="' + role + ':accent" value="' + esc(cur.accent || m.a) + '" ' + (ed ? '' : 'disabled') + '>'}สีหลัก</label>
           <label>${'<input type="color" data-skc="' + role + ':bg" value="' + esc(cur.bg || m.bg) + '" ' + (ed ? '' : 'disabled') + '>'}พื้นหลัง</label>
-          ${ed && (cur.accent || cur.bg) ? `<button class="btn btn-ghost sm" data-skr="${role}">${ic('undo', 'sm')}ใช้สีของธีม</button>` : ''}</div></div>`;
+          ${ed && (cur.accent || cur.bg) ? `<button class="btn btn-ghost sm" data-skr="${role}">${ic('undo', 'sm')}ใช้สีของธีม</button>` : ''}</div>
+        ${role === 'operator' ? this.teamBox(d, ed) : ''}</div>`;
     };
     return `<section class="card sk-card" style="grid-column:1/-1"><div class="card-h">${tile('sheet', 'var(--primary)', 'sm')}<div class="title">${bi('ธีมสี · Operator / Officer', 'COLOR THEME · PER ROLE')}</div><span class="grow"></span>
         ${ed ? `<button class="btn btn-ghost sm" data-skx>ยกเลิก</button><button class="btn btn-primary sm" data-sks>${ic('check', 'sm')}บันทึกธีม</button>` : '<span class="badge"><span class="dot"></span>Officer เป็นผู้กำหนด</span>'}</div>
       <div class="sk-grid">${col('operator', 'Operator', 'หน้าจอพนักงาน')}${col('officer', 'Officer', 'หน้าจอเจ้าหน้าที่')}</div>
       <p class="hint">กดเลือกเพื่อดูตัวอย่างทันที · ทุกเครื่องเปลี่ยนตามหลังกดบันทึก · แยกสีให้รู้ทันทีว่าตอนนี้อยู่โหมดไหน · โหมดมืดใช้สีมาตรฐาน</p></section>`;
   },
+  /** Operator: follow today's day-shift team */
+  teamBox(d, ed) {
+    const on = !!d.operator.by_team, t = this.teamToday();
+    const sel = tm => `<label class="sk-tm" data-t="${tm}"><b>ทีม ${tm}</b><select class="input" data-skt="${tm}" ${ed && on ? '' : 'disabled'}>${SKINS.map(k => `<option value="${k.id}" ${(d.teams[tm].id || '') === k.id ? 'selected' : ''}>${esc(k.th)}</option>`).join('')}</select></label>`;
+    return `<div class="sk-team ${on ? 'on' : ''}"><label class="bk-sw"><span class="switch"><input type="checkbox" data-skbt ${on ? 'checked' : ''} ${ed ? '' : 'disabled'}><span></span></span>
+        <span><b>เปลี่ยนธีมตามทีมที่เข้ากะเช้า</b><small>${t ? `วันนี้กะเช้าทีม ${t}${on ? ' → ' + esc(this.meta(d.teams[t] && d.teams[t].id).th) : ''}` : 'วันนี้ไม่มีกะเช้า → ใช้ธีมด้านบน'}</small></span></label>
+      ${on ? `<div class="sk-tms">${sel('A')}${sel('B')}${sel('C')}</div>` : ''}</div>`;
+  },
   bindCard(el, rerender) {
     const box = el.querySelector('.sk-card'); if (!box || !App.officer) return;
     const d = this._draft, me = this.role();
-    const preview = role => { if (role === me) { this._preview = d[role]; this.apply(); } };
+    const preview = role => { if (role === me) { this._preview = d; this.apply(); } };
     box.addEventListener('click', async e => {
       const s = e.target.closest('[data-sk]');
-      if (s) { const [role, id] = s.dataset.sk.split(':'); d[role] = { id: id }; preview(role); return rerender(); }
+      if (s) { const [role, id] = s.dataset.sk.split(':'); d[role] = { id: id, by_team: role === 'operator' ? !!d.operator.by_team : undefined }; preview(role); return rerender(); }
       const r = e.target.closest('[data-skr]');
-      if (r) { const role = r.dataset.skr; d[role] = { id: d[role].id || '' }; preview(role); return rerender(); }
+      if (r) { const role = r.dataset.skr; d[role] = { id: d[role].id || '', by_team: d[role].by_team }; preview(role); return rerender(); }
       if (e.target.closest('[data-skx]')) { this._draft = null; this._preview = null; this.apply(); return rerender(); }
       if (e.target.closest('[data-sks]')) {
         try { App.info.skins = await api('skins_save', d); this._draft = null; this._preview = null; this.apply(); toast('บันทึกธีมแล้ว', `Operator: ${this.meta(d.operator.id).th} · Officer: ${this.meta(d.officer.id).th}`); rerender(); }
@@ -8124,5 +8154,7 @@ const Skin = {
       const [role, k] = inp.dataset.skc.split(':'); d[role] = Object.assign({}, d[role], { [k]: inp.value }); preview(role);
     }));
     box.querySelectorAll('[data-skc]').forEach(inp => inp.addEventListener('change', () => rerender()));
+    box.querySelector('[data-skbt]')?.addEventListener('change', e => { d.operator = Object.assign({}, d.operator, { by_team: e.target.checked }); preview('operator'); rerender(); });
+    box.querySelectorAll('[data-skt]').forEach(sl => sl.addEventListener('change', () => { d.teams[sl.dataset.skt] = { id: sl.value }; preview('operator'); rerender(); }));
   },
 };
