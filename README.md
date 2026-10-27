@@ -1,1 +1,67 @@
-# HRM-Stock
+# HRM STOCK CONTROL MANAGEMENT · เว็บแอปบน Vercel
+
+หน้าเว็บเหมือนฉบับ Google ทุกอย่าง และใช้ข้อมูลชุดเดียวกัน ข้อมูลยังอยู่ใน Google Sheet เดิม
+ส่วน Vercel ทำหน้าที่ 2 อย่าง คือแสดงหน้าเว็บ และส่งต่อคำสั่งไปยัง Apps Script ผ่าน `/api`
+
+```
+เบราว์เซอร์ ──► Vercel (public/ + api/[name].js) ──► Apps Script /exec ──► Google Sheet
+                                       ▲ GAS_KEY = WEB_KEY (รหัสลับที่ต้องตรงกัน)
+```
+
+## ติดตั้งครั้งแรก (ประมาณ 15 นาที)
+
+### 1. ฝั่ง Google Apps Script (ทำครั้งเดียว)
+1. วางโค้ด v3.16 ทับไฟล์เดิมใน Apps Script ให้ครบทั้ง 5 ไฟล์ แล้วกดบันทึก
+2. เลือกฟังก์ชัน `makeWebKey` แล้วกด ▶ Run
+3. เปิด "บันทึกการดำเนินการ" (Execution log) แล้วคัดลอกค่าในบรรทัด `GAS_KEY สำหรับ Vercel = …` เก็บไว้
+4. Deploy เป็นเวอร์ชันใหม่: Deploy › จัดการการทำให้ใช้งานได้ › ✏️ › เวอร์ชัน: ใหม่
+   - ผู้มีสิทธิ์เข้าถึงต้องเป็น "ทุกคน" เหมือนเดิม
+5. คัดลอกลิงก์เว็บแอปที่ลงท้ายด้วย `/exec` เก็บไว้
+
+### 2. อัปโหลดขึ้น GitHub
+1. ไปที่ github.com แล้วกด New repository
+   - ตั้งชื่อ เช่น `hrm-stock-web`
+   - เลือก **Private**
+2. กด "uploading an existing file" แล้วลากไฟล์ทั้งหมดในโฟลเดอร์นี้ขึ้นไป
+   - ไฟล์ที่ต้องมี: `api/`, `public/`, `vercel.json`, `package.json`, `README.md`, `.gitignore`, `.env.example`
+3. กด Commit changes
+
+### 3. เชื่อม Vercel
+1. เข้า vercel.com ด้วยบัญชี GitHub
+2. ไปที่ Add New… › Project › Import repo `hrm-stock-web`
+3. Framework Preset เลือก **Other** ไม่ต้องตั้ง Build Command
+4. ที่ Environment Variables ให้เพิ่ม 3 ค่า:
+
+   | Name | Value |
+   |---|---|
+   | `BACKEND` | `gas` |
+   | `GAS_URL` | ลิงก์ `/exec` จากขั้นที่ 1.5 |
+   | `GAS_KEY` | ค่าที่คัดลอกไว้ในขั้นที่ 1.3 |
+
+5. กด Deploy แล้วจะได้ลิงก์ เช่น `https://hrm-stock-web.vercel.app`
+
+### 4. ใช้งาน
+- **เปิดใช้งาน:** เปิดลิงก์ Vercel ได้ทั้งคอมพิวเตอร์และมือถือ ระบบเลือกหน้าจอให้อัตโนมัติ
+- **Widget:** ใช้ลิงก์ `https://…vercel.app/?view=widget` หรือใส่ลิงก์ Vercel ในโปรแกรม HRMStockWidget.exe
+- **LINE:** ปุ่มในการ์ด LINE จะเปิดลิงก์ Vercel ให้เอง โดยระบบจำลิงก์ไว้ตั้งแต่ครั้งแรกที่มีคนเปิดเว็บ
+  - Webhook ของ LINE ยังต้องเป็นลิงก์ `/exec` เหมือนเดิม
+- **โหมด Officer และรหัส PIN:** ใช้ชุดเดิมจากฉบับ Google
+
+## อัปเดตเวอร์ชันถัดไป
+- อัปโหลดไฟล์ในโฟลเดอร์ `public/` ใหม่ทับใน GitHub แล้ว Vercel จะ Deploy ให้เองภายในประมาณ 1 นาที
+- ถ้า `Code.gs` มีการเปลี่ยนแปลง ต้องวางโค้ดใหม่ใน Apps Script แล้ว Deploy เวอร์ชันใหม่ด้วย
+
+## ความปลอดภัย
+- `GAS_KEY` ต้องเก็บไว้ใน Vercel Environment Variables เท่านั้น ห้ามใส่ลงในไฟล์ใน repo
+- repo ต้องเป็น **Private**
+- ห้ามแชร์ลิงก์ `/exec` และลิงก์ Vercel นอกทีม
+- ต้องเปลี่ยน PIN ของ Officer จากค่าเริ่มต้น 1234
+- ถ้ารหัสลับหลุด ให้ลบ `WEB_KEY` ใน Apps Script › Project Settings › Script Properties
+  - จากนั้นรัน `makeWebKey` เพื่อสร้างรหัสใหม่
+  - แล้วแก้ค่า `GAS_KEY` ใน Vercel และกด Redeploy
+
+## ข้อจำกัด
+- ไฟล์ที่ส่งหรือรับในแต่ละครั้ง (รูปสแกน หรือ PDF ที่ export) ต้องไม่เกินประมาณ 4 MB ตามข้อจำกัดของ Vercel
+  - ถ้าไฟล์ใหญ่กว่านี้ ให้ใช้ลิงก์ `/exec` แทน
+- Vercel แบบฟรีรอคำตอบได้นานสุด 60 วินาทีต่อครั้ง ซึ่งพอสำหรับทุกหน้า
+- `BACKEND=supabase` (ใช้ฐานข้อมูลแทน Google Sheet) จะเพิ่มในเวอร์ชันถัดไป
