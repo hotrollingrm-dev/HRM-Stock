@@ -3649,12 +3649,24 @@ const LineUI = {
         ${step(s.group, 'ผูกกลุ่ม', s.group ? `ผูกกลุ่มแล้ว (${esc(s.group_hint || '')}) · พิมพ์ “เช็ค” ในกลุ่มเพื่อดูสถานะ (ถ้าบอทเป็นของระบบนี้)` : 'เชิญบอทเข้ากลุ่ม แล้วพิมพ์ “ตั้งกลุ่ม” — หรือใส่ Group ID ด้านล่าง ถ้าใช้บอทร่วมกับระบบอื่น')}
         ${step(s.on && s.trigger, 'แจ้งเตือนอัตโนมัติ', s.on ? `ตรวจทุก 5 นาที · ส่งการ์ด 1 ครั้ง/วัน เมื่อเลย ${esc(s.remind_at)} แล้วกะเช้ายังไม่ลง STOCK${s.last_sent ? ' · ล่าสุด ' + fmtDShort(s.last_sent) : ''}` : 'ปิดอยู่')}
       </ol>
+      ${this.quota(s.quota)}
       ${s.last_error ? `<div class="ln-err">${ic('alert', 'sm')}<span>ส่งไม่สำเร็จล่าสุด: ${esc(s.last_error)}</span></div>` : ''}
       <div class="frow ln-row"><div class="field"><label>${s.has_token ? 'เปลี่ยน token' : 'Channel access token'} <span class="en">write-only</span></label><input class="input" type="password" id="ln-tok" autocomplete="off" placeholder="${s.has_token ? '•••••••• (เว้นว่าง = ใช้ค่าเดิม)' : 'วาง token ที่นี่'}"></div>
         <div class="field"><label>Group ID <span class="en">ใช้บอทร่วมกับระบบอื่น · ไม่บังคับ</span></label><input class="input" id="ln-gid" autocomplete="off" spellcheck="false" placeholder="${s.group ? 'ตั้งแล้ว ' + esc(s.group_hint || '') + ' (เว้นว่าง = ใช้ค่าเดิม)' : 'C… (33 ตัว)'}"></div></div>
       <div class="ln-act"><label class="bk-sw"><span class="switch"><input type="checkbox" id="ln-on" ${s.on ? 'checked' : ''}><span></span></span><b>เปิดแจ้งเตือน LINE</b></label><span class="grow"></span>
         ${s.group ? `<button class="btn btn-ghost sm" data-ln="unbind">${ic('x', 'sm')}ยกเลิกกลุ่ม</button><button class="btn btn-tonal sm" data-ln="test">${ic('bell', 'sm')}ส่งการ์ดทดสอบ</button>` : ''}
         <button class="btn btn-primary sm" data-ln="save">${ic('check', 'sm')}บันทึก</button></div>`;
+  },
+  /** "เดือนนี้ใช้ไป X / 300" bar — the count is LINE's own, for everything using this bot */
+  quota(q) {
+    if (!q) return '';
+    if (q.error) return `<div class="ln-q"><span class="ln-q-h"><b>โควตาข้อความเดือนนี้</b><small>${esc(q.error)}</small></span></div>`;
+    const lim = q.limit, pct = lim ? Math.min(100, Math.round(q.used / lim * 100)) : 0, tone = !lim ? 'ok' : pct >= 100 ? 'full' : pct >= 80 ? 'warn' : 'ok';
+    const left = lim ? Math.max(0, lim - q.used) : null;
+    return `<div class="ln-q ${tone}"><div class="ln-q-h"><span><b>โควตาข้อความเดือนนี้</b><small>${lim ? (left ? `เหลือ ${left.toLocaleString()} ข้อความ · ` : 'หมดแล้ว — ' ) + 'นับรวมทุกระบบที่ใช้บอทนี้ · รีเซ็ตต้นเดือน' : 'แพ็กเกจไม่จำกัดจำนวน'}</small></span>
+      <span class="ln-q-n num">${q.used.toLocaleString()}${lim ? `<em> / ${lim.toLocaleString()}</em>` : ''}</span></div>
+      ${lim ? `<div class="ln-q-bar"><i style="width:${Math.max(pct, 2)}%"></i></div>` : ''}
+      ${tone === 'warn' ? '<small class="ln-q-w">ใกล้หมดแล้ว — การเตือน 19:45 อาจส่งไม่ได้ช่วงปลายเดือน · แจ้งเตือนบนมือถือ (Push) ยังใช้ได้</small>' : ''}</div>`;
   },
   async bind(el) {
     const box = el.querySelector('.ln-card'); if (!box) return;
