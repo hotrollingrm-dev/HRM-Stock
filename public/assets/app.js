@@ -3649,6 +3649,7 @@ const LineUI = {
         ${step(s.group, 'ผูกกลุ่ม', s.group ? `ผูกกลุ่มแล้ว (${esc(s.group_hint || '')}) · พิมพ์ “เช็ค” ในกลุ่มเพื่อดูสถานะ (ถ้าบอทเป็นของระบบนี้)` : 'เชิญบอทเข้ากลุ่ม แล้วพิมพ์ “ตั้งกลุ่ม” — หรือใส่ Group ID ด้านล่าง ถ้าใช้บอทร่วมกับระบบอื่น')}
         ${step(s.on && s.trigger, 'แจ้งเตือนอัตโนมัติ', s.on ? `ตรวจทุก 5 นาที · ส่งการ์ด 1 ครั้ง/วัน เมื่อเลย ${esc(s.remind_at)} แล้วกะเช้ายังไม่ลง STOCK${s.last_sent ? ' · ล่าสุด ' + fmtDShort(s.last_sent) : ''}` : 'ปิดอยู่')}
       </ol>
+      ${s.last_error ? `<div class="ln-err">${ic('alert', 'sm')}<span>ส่งไม่สำเร็จล่าสุด: ${esc(s.last_error)}</span></div>` : ''}
       <div class="frow ln-row"><div class="field"><label>${s.has_token ? 'เปลี่ยน token' : 'Channel access token'} <span class="en">write-only</span></label><input class="input" type="password" id="ln-tok" autocomplete="off" placeholder="${s.has_token ? '•••••••• (เว้นว่าง = ใช้ค่าเดิม)' : 'วาง token ที่นี่'}"></div>
         <div class="field"><label>Group ID <span class="en">ใช้บอทร่วมกับระบบอื่น · ไม่บังคับ</span></label><input class="input" id="ln-gid" autocomplete="off" spellcheck="false" placeholder="${s.group ? 'ตั้งแล้ว ' + esc(s.group_hint || '') + ' (เว้นว่าง = ใช้ค่าเดิม)' : 'C… (33 ตัว)'}"></div></div>
       <div class="ln-act"><label class="bk-sw"><span class="switch"><input type="checkbox" id="ln-on" ${s.on ? 'checked' : ''}><span></span></span><b>เปิดแจ้งเตือน LINE</b></label><span class="grow"></span>

@@ -2233,3 +2233,4 @@ body.wg-body{overflow:hidden}
 .pu-grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 10px}
 .pu-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.pu-h .th{font-size:18px;font-weight:700}
 .pu-sheet .pu-act .btn{flex:1}
+.ln-err{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;margin-bottom:12px;border-radius:12px;background:var(--leak-soft);color:var(--leak);font-size:13px}
