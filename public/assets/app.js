@@ -389,6 +389,7 @@ const App = {
   async start() {
     if (IS_WEB && await TeamGate.join()) return;
     try { this.info = await api('app_info'); } catch (e) { if (e.needLogin) return; this.info = { ready: false, error: e.message }; }
+    if (typeof Skin !== 'undefined') { Skin.init(); Skin.apply(); }
     if (!this.info.ready && IS_GAS) return this.offline(this.info.error);   // Google / web: nothing to set up — the server is just unreachable
     if (!this.info.ready) return Setup.show(1);
     if (typeof Widget !== 'undefined' && Widget.want() && this.info.has_data) return Widget.start();   // desktop widget window
@@ -433,6 +434,7 @@ const App = {
     document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); PAGES[this.page]?.save?.(); } });
   },
   renderHeader() {
+    if (typeof Skin !== 'undefined') Skin.apply();   // Operator / Officer each have their own colours
     const p = PAGES[this.page];
     const now = new Date();
     $('#header').innerHTML = `
@@ -2144,6 +2146,7 @@ PAGES.settings = {
         <div class="frow"><div class="field"><label>รหัสเดิม</label><input class="input" type="password" id="p0" inputmode="numeric"></div><div class="field"><label>รหัสใหม่ (4–8 หลัก)</label><input class="input" type="password" id="p1" inputmode="numeric"></div></div>
         <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn btn-tonal" id="psv">${ic('key', 'sm')}เปลี่ยนรหัส</button></div></section>` : ''}
       ${typeof People !== 'undefined' ? People.card() : ''}
+      ${typeof Skin !== 'undefined' ? Skin.card() : ''}
       ${typeof Shift !== 'undefined' ? Shift.card() : ''}
       ${typeof LineUI !== 'undefined' ? LineUI.card() : ''}
       ${typeof QrUI !== 'undefined' ? QrUI.card() : ''}
@@ -2162,6 +2165,7 @@ PAGES.settings = {
       App.renderHeader(); this.render(el); App.updateBadges();
     };
     if (typeof People !== 'undefined') People.bindCard(el, () => this.render(el));
+    if (typeof Skin !== 'undefined') Skin.bindCard(el, () => this.render(el));
     if (typeof Shift !== 'undefined') Shift.bindCard(el, () => this.render(el));
     if (typeof LineUI !== 'undefined') LineUI.bind(el);
     if (typeof QrUI !== 'undefined') QrUI.bind(el, () => this.render(el));
@@ -8032,4 +8036,93 @@ const PushUI = {
     ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-x]')) { ov.classList.remove('on'); setTimeout(() => ov.remove(), 300); } });
   },
   async dot() { const b = document.querySelector('[data-push]'); if (b) b.classList.toggle('on', !!(await this.sub()) && Notification.permission === 'granted'); },
+};
+
+/* ===== skin.js ===== */
+/* =====================================================================
+   SKIN — ธีมสี 10 แบบ · Operator กับ Officer ใช้ธีมต่างกันได้ · Officer เป็นคนกำหนด (บันทึกในข้อมูลกลาง)
+   cfg = { operator:{id, accent, bg}, officer:{id, accent, bg} } · id '' = HRM เดิม · accent/bg = สีที่ปรับเอง (ไม่บังคับ)
+   ===================================================================== */
+'use strict';
+
+const SKINS = [
+  { id: '', th: 'HRM มาตรฐาน', en: 'Default', bg: '#E9EDF4', a: '#2862E6', pv: 'radial-gradient(60% 80% at 0 0,rgba(88,140,255,.4),transparent),radial-gradient(60% 80% at 100% 100%,rgba(255,184,76,.35),transparent)' },
+  { id: 'rose', th: 'โรสทะเลทราย', en: 'Desert Rose', bg: '#F3C7CE', a: '#C9456E', pv: 'linear-gradient(180deg,#E9A3B3 0 55%,#F0BFC0 55%),radial-gradient(circle at 50% 60%,#F59BB1 0 14px,transparent 15px)' },
+  { id: 'peach', th: 'พีชโซดา', en: 'Peach Soda', bg: '#FFF0E6', a: '#D9582A', pv: 'radial-gradient(#F07A4B55 2px,transparent 2.5px) 0 0/12px 12px' },
+  { id: 'mint', th: 'มิ้นต์ก้อนเมฆ', en: 'Mint Cloud', bg: '#E3F6EF', a: '#0E8C72', pv: 'radial-gradient(ellipse 18px 10px at 30% 40%,#fff 90%,transparent),radial-gradient(ellipse 14px 8px at 75% 70%,#fff 90%,transparent)' },
+  { id: 'lavender', th: 'ลาเวนเดอร์วิบวับ', en: 'Lavender Haze', bg: '#EFEAFB', a: '#6E4FDB', pv: 'radial-gradient(#8B6CF055 1.5px,transparent 2px) 0 0/14px 14px' },
+  { id: 'sky', th: 'ฟองฟ้าใส', en: 'Sky Bubble', bg: '#E2F0FF', a: '#1F6FE0', pv: 'radial-gradient(circle at 25% 40%,transparent 7px,#fff 8px,transparent 9.5px),radial-gradient(circle at 72% 62%,transparent 11px,#fff 12px,transparent 13.5px)' },
+  { id: 'lemon', th: 'เลมอนสก็อต', en: 'Lemon Drop', bg: '#FFF8DD', a: '#A86E00', pv: 'linear-gradient(#F2B70518 0 0) 0 6px/100% 6px,linear-gradient(90deg,#F2B70518 0 0) 6px 0/6px 100%' },
+  { id: 'matcha', th: 'มัทฉะลาเต้', en: 'Matcha Latte', bg: '#EEF3E4', a: '#4E8A3B', pv: 'radial-gradient(ellipse 8px 4px at 30% 35%,#5E9A4B44 90%,transparent),radial-gradient(ellipse 8px 4px at 70% 70%,#5E9A4B44 90%,transparent)' },
+  { id: 'sakura', th: 'ซากุระ', en: 'Sakura', bg: '#FFEFF3', a: '#CF3F69', pv: 'radial-gradient(ellipse 6px 4px at 25% 30%,#F28BA866 90%,transparent),radial-gradient(ellipse 6px 4px at 70% 65%,#F28BA866 90%,transparent),radial-gradient(ellipse 4px 3px at 80% 25%,#F28BA866 90%,transparent)' },
+  { id: 'ocean', th: 'คลื่นทะเล', en: 'Ocean Wave', bg: '#E0F4F8', a: '#0B7EA3', pv: 'repeating-radial-gradient(circle at 50% 160%,transparent 0 10px,#0E8FB522 10px 12px)' },
+  { id: 'cocoa', th: 'มิลค์โกโก้', en: 'Milk Cocoa', bg: '#F6EDE6', a: '#9A5B3E', pv: 'radial-gradient(#B97A5C44 2px,transparent 2.5px) 0 0/14px 14px' },
+];
+
+const Skin = {
+  cfg() { const c = App.info?.skins; return c && typeof c === 'object' ? c : {}; },
+  role() { return App.officer ? 'officer' : 'operator'; },
+  dark() { const t = document.documentElement.getAttribute('data-theme'); return t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches); },
+  _preview: null,
+  /** apply the skin for the current role (or a preview) — skins are a light-mode look */
+  apply(over) {
+    const root = document.documentElement, s = over || this._preview || this.cfg()[this.role()] || {};
+    ['--primary', '--primary-soft', '--on-primary', '--bg'].forEach(k => root.style.removeProperty(k));
+    if (this.dark()) { root.removeAttribute('data-skin'); return; }
+    if (s.id) root.setAttribute('data-skin', s.id); else root.removeAttribute('data-skin');
+    if (/^#[0-9a-f]{6}$/i.test(s.accent || '')) {
+      root.style.setProperty('--primary', s.accent);
+      root.style.setProperty('--primary-soft', s.accent + '1F');
+      root.style.setProperty('--on-primary', this.lum(s.accent) > .55 ? '#111722' : '#FFFFFF');
+    }
+    if (/^#[0-9a-f]{6}$/i.test(s.bg || '')) root.style.setProperty('--bg', s.bg);
+  },
+  lum(hex) { const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; },
+  meta(id) { return SKINS.find(x => x.id === (id || '')) || SKINS[0]; },
+  init() {
+    try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => this.apply()); } catch (e) { }
+    new MutationObserver(() => this.apply()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  },
+
+  /* ---------------- Settings card ---------------- */
+  card() {
+    const ed = App.officer, cfg = this.cfg();
+    this._draft = this._draft || JSON.parse(JSON.stringify({ operator: cfg.operator || {}, officer: cfg.officer || {} }));
+    const d = this._draft, me = this.role();
+    const col = (role, th, en) => {
+      const cur = d[role] || {}, m = this.meta(cur.id);
+      const sw = SKINS.map(k => `<button class="sk-sw ${(cur.id || '') === k.id ? 'on' : ''}" data-sk="${role}:${k.id}" style="--sk-a:${k.a};--sk-bg:${k.bg}" ${ed ? '' : 'disabled'} title="${esc(k.th)} · ${k.en}">
+          <span class="sk-pv" style="background:${k.pv},${k.bg}"><b></b><i></i></span><span>${esc(k.th)}<small>${k.en}</small></span></button>`).join('');
+      return `<div class="sk-col ${role === me ? 'cur' : ''}"><h4>${role === 'officer' ? ic('shield', 'sm') : ic('user', 'sm')}${th} <span class="en">${en}</span>${role === me ? '<span class="sk-cur">เครื่องนี้ใช้อยู่</span>' : ''}</h4>
+        <div class="sk-list">${sw}</div>
+        <div class="sk-cust"><span>ปรับสีเอง:</span>
+          <label>${'<input type="color" data-skc="' + role + ':accent" value="' + esc(cur.accent || m.a) + '" ' + (ed ? '' : 'disabled') + '>'}สีหลัก</label>
+          <label>${'<input type="color" data-skc="' + role + ':bg" value="' + esc(cur.bg || m.bg) + '" ' + (ed ? '' : 'disabled') + '>'}พื้นหลัง</label>
+          ${ed && (cur.accent || cur.bg) ? `<button class="btn btn-ghost sm" data-skr="${role}">${ic('undo', 'sm')}ใช้สีของธีม</button>` : ''}</div></div>`;
+    };
+    return `<section class="card sk-card" style="grid-column:1/-1"><div class="card-h">${tile('sheet', 'var(--primary)', 'sm')}<div class="title">${bi('ธีมสี · Operator / Officer', 'COLOR THEME · PER ROLE')}</div><span class="grow"></span>
+        ${ed ? `<button class="btn btn-ghost sm" data-skx>ยกเลิก</button><button class="btn btn-primary sm" data-sks>${ic('check', 'sm')}บันทึกธีม</button>` : '<span class="badge"><span class="dot"></span>Officer เป็นผู้กำหนด</span>'}</div>
+      <div class="sk-grid">${col('operator', 'Operator', 'หน้าจอพนักงาน')}${col('officer', 'Officer', 'หน้าจอเจ้าหน้าที่')}</div>
+      <p class="hint">กดเลือกเพื่อดูตัวอย่างทันที · ทุกเครื่องเปลี่ยนตามหลังกดบันทึก · แยกสีให้รู้ทันทีว่าตอนนี้อยู่โหมดไหน · โหมดมืดใช้สีมาตรฐาน</p></section>`;
+  },
+  bindCard(el, rerender) {
+    const box = el.querySelector('.sk-card'); if (!box || !App.officer) return;
+    const d = this._draft, me = this.role();
+    const preview = role => { if (role === me) { this._preview = d[role]; this.apply(); } };
+    box.addEventListener('click', async e => {
+      const s = e.target.closest('[data-sk]');
+      if (s) { const [role, id] = s.dataset.sk.split(':'); d[role] = { id: id }; preview(role); return rerender(); }
+      const r = e.target.closest('[data-skr]');
+      if (r) { const role = r.dataset.skr; d[role] = { id: d[role].id || '' }; preview(role); return rerender(); }
+      if (e.target.closest('[data-skx]')) { this._draft = null; this._preview = null; this.apply(); return rerender(); }
+      if (e.target.closest('[data-sks]')) {
+        try { App.info.skins = await api('skins_save', d); this._draft = null; this._preview = null; this.apply(); toast('บันทึกธีมแล้ว', `Operator: ${this.meta(d.operator.id).th} · Officer: ${this.meta(d.officer.id).th}`); rerender(); }
+        catch (er) { toastErr(er); }
+      }
+    });
+    box.querySelectorAll('[data-skc]').forEach(inp => inp.addEventListener('input', () => {
+      const [role, k] = inp.dataset.skc.split(':'); d[role] = Object.assign({}, d[role], { [k]: inp.value }); preview(role);
+    }));
+    box.querySelectorAll('[data-skc]').forEach(inp => inp.addEventListener('change', () => rerender()));
+  },
 };
