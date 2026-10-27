@@ -3646,10 +3646,11 @@ const LineUI = {
     return `<ol class="ln-steps">
         ${step(s.has_token, 'Channel access token', s.has_token ? 'บันทึกแล้ว (ซ่อนไว้ใน Script Properties)' : 'จาก LINE Developers → Messaging API ของบอท Stock')}
         ${step(!!s.webhook, 'Webhook URL', s.webhook ? `<code>${esc(s.webhook)}</code>` : 'Deploy เป็น Web app ก่อน')}
-        ${step(s.group, 'ผูกกลุ่ม', s.group ? 'ผูกกลุ่มแล้ว · พิมพ์ “เช็ค” ในกลุ่มเพื่อดูสถานะ' : 'เชิญบอทเข้ากลุ่ม แล้วพิมพ์ “ตั้งกลุ่ม”')}
+        ${step(s.group, 'ผูกกลุ่ม', s.group ? `ผูกกลุ่มแล้ว (${esc(s.group_hint || '')}) · พิมพ์ “เช็ค” ในกลุ่มเพื่อดูสถานะ (ถ้าบอทเป็นของระบบนี้)` : 'เชิญบอทเข้ากลุ่ม แล้วพิมพ์ “ตั้งกลุ่ม” — หรือใส่ Group ID ด้านล่าง ถ้าใช้บอทร่วมกับระบบอื่น')}
         ${step(s.on && s.trigger, 'แจ้งเตือนอัตโนมัติ', s.on ? `ตรวจทุก 5 นาที · ส่งการ์ด 1 ครั้ง/วัน เมื่อเลย ${esc(s.remind_at)} แล้วกะเช้ายังไม่ลง STOCK${s.last_sent ? ' · ล่าสุด ' + fmtDShort(s.last_sent) : ''}` : 'ปิดอยู่')}
       </ol>
-      <div class="frow ln-row"><div class="field"><label>${s.has_token ? 'เปลี่ยน token' : 'Channel access token'} <span class="en">write-only</span></label><input class="input" type="password" id="ln-tok" autocomplete="off" placeholder="${s.has_token ? '•••••••• (เว้นว่าง = ใช้ค่าเดิม)' : 'วาง token ที่นี่'}"></div></div>
+      <div class="frow ln-row"><div class="field"><label>${s.has_token ? 'เปลี่ยน token' : 'Channel access token'} <span class="en">write-only</span></label><input class="input" type="password" id="ln-tok" autocomplete="off" placeholder="${s.has_token ? '•••••••• (เว้นว่าง = ใช้ค่าเดิม)' : 'วาง token ที่นี่'}"></div>
+        <div class="field"><label>Group ID <span class="en">ใช้บอทร่วมกับระบบอื่น · ไม่บังคับ</span></label><input class="input" id="ln-gid" autocomplete="off" spellcheck="false" placeholder="${s.group ? 'ตั้งแล้ว ' + esc(s.group_hint || '') + ' (เว้นว่าง = ใช้ค่าเดิม)' : 'C… (33 ตัว)'}"></div></div>
       <div class="ln-act"><label class="bk-sw"><span class="switch"><input type="checkbox" id="ln-on" ${s.on ? 'checked' : ''}><span></span></span><b>เปิดแจ้งเตือน LINE</b></label><span class="grow"></span>
         ${s.group ? `<button class="btn btn-ghost sm" data-ln="unbind">${ic('x', 'sm')}ยกเลิกกลุ่ม</button><button class="btn btn-tonal sm" data-ln="test">${ic('bell', 'sm')}ส่งการ์ดทดสอบ</button>` : ''}
         <button class="btn btn-primary sm" data-ln="save">${ic('check', 'sm')}บันทึก</button></div>`;
@@ -3664,7 +3665,7 @@ const LineUI = {
       const b = e.target.closest('[data-ln]'); if (!b) return;
       b.disabled = true;
       try {
-        if (b.dataset.ln === 'save') { paint(await api('line_save', { token: box.querySelector('#ln-tok').value, on: box.querySelector('#ln-on').checked })); toast('บันทึกการแจ้งเตือน LINE แล้ว', this.s.on ? 'เปิดอยู่ · ตรวจทุก 5 นาที' : 'ปิดอยู่'); }
+        if (b.dataset.ln === 'save') { paint(await api('line_save', { token: box.querySelector('#ln-tok').value, group: box.querySelector('#ln-gid').value, on: box.querySelector('#ln-on').checked })); toast('บันทึกการแจ้งเตือน LINE แล้ว', this.s.on ? 'เปิดอยู่ · ตรวจทุก 5 นาที' : 'ปิดอยู่'); }
         else if (b.dataset.ln === 'test') { await api('line_test'); toast('ส่งการ์ดเข้ากลุ่ม LINE แล้ว'); }
         else if (b.dataset.ln === 'unbind') { paint(await api('line_unbind')); toast('ยกเลิกกลุ่มแล้ว', 'พิมพ์ “ตั้งกลุ่ม” ในกลุ่มใหม่ได้เลย'); }
       } catch (er) { toastErr(er); } finally { b.disabled = false; }
