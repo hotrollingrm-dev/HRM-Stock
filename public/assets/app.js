@@ -2147,6 +2147,7 @@ PAGES.settings = {
       ${typeof Shift !== 'undefined' ? Shift.card() : ''}
       ${typeof LineUI !== 'undefined' ? LineUI.card() : ''}
       ${typeof QrUI !== 'undefined' ? QrUI.card() : ''}
+      ${typeof PushUI !== 'undefined' ? PushUI.card() : ''}
       ${typeof HistImport !== 'undefined' ? HistImport.card() : ''}
       ${typeof BackupUI !== 'undefined' ? BackupUI.card() : ''}
       ${typeof ResetUI !== 'undefined' ? ResetUI.card() : ''}
@@ -2164,6 +2165,7 @@ PAGES.settings = {
     if (typeof Shift !== 'undefined') Shift.bindCard(el, () => this.render(el));
     if (typeof LineUI !== 'undefined') LineUI.bind(el);
     if (typeof QrUI !== 'undefined') QrUI.bind(el, () => this.render(el));
+    if (typeof PushUI !== 'undefined') PushUI.bindCard(el);
     el.querySelector('[data-tglogout]')?.addEventListener('click', () => TeamGate.logout());
     if (typeof HistImport !== 'undefined') HistImport.bind(el);
     if (typeof ResetUI !== 'undefined') ResetUI.bind(el);
@@ -5417,6 +5419,7 @@ const Mobile = {
       <header class="mb-top">
         <span class="mb-logo">${art('logo', 30)}</span><div class="mb-brand"><b>HRM STOCK</b><span>บันทึกการใช้ · มือถือ</span></div>
         <span class="grow"></span>
+        ${typeof PushUI !== 'undefined' && IS_WEB ? `<button class="mb-icon mb-push" data-push title="แจ้งเตือน" aria-label="แจ้งเตือน">${ic('bell', 'sm')}<i></i></button>` : ''}
         <button class="mb-icon" data-desk title="เปิดแบบเต็ม">${ic('side', 'sm')}</button>
       </header>
       <div class="mb-date">
@@ -5461,10 +5464,12 @@ const Mobile = {
 
   bind() {
     const root = $('#root');
+    if (typeof PushUI !== 'undefined' && IS_WEB) PushUI.dot();
     root.onclick = e => {
       const t = e.target;
       const g = t.closest('[data-goday]'); if (g) return this.load(g.dataset.goday);
       const dd = t.closest('[data-day]'); if (dd && !dd.disabled) { const x = pd(this.date); x.setDate(x.getDate() + +dd.dataset.day); return this.load(iso(x)); }
+      if (t.closest('[data-push]')) return PushUI.sheet();
       if (t.closest('[data-desk]')) { localStorageSet('view', 'desktop'); location.hash = 'home'; location.reload(); return; }
       if (t.closest('[data-carry]')) { this.carryOpen = !this.carryOpen; t.closest('.mb-carry').classList.toggle('open', this.carryOpen); return; }
       if (t.closest('[data-add]')) return this.pick();
@@ -7941,4 +7946,76 @@ const QrUI = {
     </style></head><body><h1>HRM STOCK</h1><p class="s">ระบบควบคุมและจัดการสต็อก HRM · เปิดบนมือถือ</p><div class="w">${qa}${qb}</div>
     <p class="u">${esc(this.base())}</p><script>window.onload=()=>setTimeout(()=>print(),200)</script></body></html>`, 'HRM_STOCK_QR');
   },
+};
+
+/* ===== push.js ===== */
+/* =====================================================================
+   PUSH — แจ้งเตือนบนมือถือ (เว็บบน Vercel / แอปที่ติดตั้ง)
+   เครื่องนี้เลือกทีม → เลยเวลาเตือนแล้วกะเช้าทีมนั้นยังไม่ลง STOCK → เด้งเตือน 1 ครั้ง/วัน (แม้ไม่ได้เปิดแอป)
+   ===================================================================== */
+'use strict';
+
+const PushUI = {
+  ok() { return IS_WEB && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; },
+  ios() { return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
+  standalone() { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; },
+  team() { return localStorageGet('pushTeam') || ''; },
+  async sub() { try { const r = await navigator.serviceWorker.ready; return await r.pushManager.getSubscription(); } catch (e) { return null; } },
+  u8(b64) { const s = atob(b64.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((b64.length + 3) % 4)); return Uint8Array.from(s, c => c.charCodeAt(0)); },
+  async enable(team) {
+    if (Notification.permission === 'denied') throw new Error('เบราว์เซอร์บล็อกการแจ้งเตือนของเว็บนี้ — เปิดสิทธิ์ในตั้งค่าเบราว์เซอร์ก่อน');
+    if ((await Notification.requestPermission()) !== 'granted') throw new Error('ยังไม่ได้อนุญาตการแจ้งเตือน');
+    const key = await api('push_key'), reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: this.u8(key) });
+    await api('push_subscribe', sub.toJSON(), team, (this.ios() ? 'iPhone' : /android/i.test(navigator.userAgent) ? 'Android' : 'คอม') + (team ? ' · ทีม ' + team : ''));
+    localStorageSet('pushTeam', team); localStorageSet('pushOn', '1');
+  },
+  async disable() {
+    const s = await this.sub();
+    if (s) { try { await api('push_unsubscribe', s.endpoint); } catch (e) { } await s.unsubscribe(); }
+    localStorageSet('pushOn', '');
+  },
+  /** panel HTML — shared by the Settings card and the mobile sheet */
+  async panel() {
+    if (!this.ok()) return `<p class="muted">${this.ios() && !this.standalone() ? 'iPhone: กดปุ่มแชร์ ⎙ › “เพิ่มไปยังหน้าจอโฮม” แล้วเปิด HRM STOCK จากไอคอน จึงจะเปิดแจ้งเตือนได้ (iOS 16.4 ขึ้นไป)' : 'เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน — ใช้ Chrome (Android) หรือติดตั้งแอปลงหน้าจอโฮม (iPhone)'}</p>`;
+    const s = await this.sub(), on = !!s && Notification.permission === 'granted', t = this.team();
+    const chip = (v, l) => `<button class="pu-t ${t === v ? 'on' : ''}" data-pt="${v}" ${v ? `data-t="${v}"` : ''}>${l}</button>`;
+    return `<div class="pu ${on ? 'is-on' : ''}">
+      <div class="pu-st"><span class="pu-dot"></span><span><b>${on ? 'เปิดแจ้งเตือนแล้ว' : 'ยังไม่เปิดแจ้งเตือน'}</b><small>${on ? `เตือนเมื่อ${t ? ' ทีม ' + t : 'ทุกทีม'} ยังไม่ลง STOCK หลัง ${Shift.remindAt()} น.` : 'เตือนบนเครื่องนี้ แม้ไม่ได้เปิดแอป'}</small></span></div>
+      <label class="pu-lbl">เตือนของทีม <span class="en">TEAM</span></label>
+      <div class="pu-ts">${chip('A', 'ทีม A')}${chip('B', 'ทีม B')}${chip('C', 'ทีม C')}${chip('', 'ทุกทีม')}</div>
+      <div class="pu-act">${on ? `<button class="btn btn-ghost" data-pu="off">ปิดแจ้งเตือน</button><button class="btn btn-tonal" data-pu="test">${ic('bell', 'sm')}ทดสอบ</button>`
+        : `<button class="btn btn-primary" data-pu="on">${ic('bell', 'sm')}เปิดแจ้งเตือน</button>`}</div></div>`;
+  },
+  bind(box, redraw) {
+    box.addEventListener('click', async e => {
+      const tb = e.target.closest('[data-pt]');
+      if (tb) { localStorageSet('pushTeam', tb.dataset.pt); if ((await this.sub()) && Notification.permission === 'granted') { try { await this.enable(tb.dataset.pt); toast('เปลี่ยนทีมแล้ว', tb.dataset.pt ? 'ทีม ' + tb.dataset.pt : 'ทุกทีม'); } catch (er) { toastErr(er); } } return redraw(); }
+      const b = e.target.closest('[data-pu]'); if (!b) return;
+      b.disabled = true;
+      try {
+        if (b.dataset.pu === 'on') { await this.enable(this.team()); toast('เปิดแจ้งเตือนแล้ว', 'กด “ทดสอบ” เพื่อลองเด้งเตือน'); }
+        else if (b.dataset.pu === 'off') { await this.disable(); toast('ปิดแจ้งเตือนแล้ว'); }
+        else if (b.dataset.pu === 'test') { const s = await this.sub(); await api('push_test', s && s.toJSON()); toast('ส่งแล้ว', 'การแจ้งเตือนจะเด้งในไม่กี่วินาที'); }
+      } catch (er) { toastErr(er); }
+      b.disabled = false; redraw();
+    });
+  },
+  /* Settings card (desktop view) */
+  card() { return IS_WEB ? `<section class="card pu-card"><div class="card-h">${tile('bell', 'var(--primary)', 'sm')}<div class="title">${bi('แจ้งเตือนบนเครื่องนี้', 'PUSH NOTIFICATIONS')}</div></div><div class="pu-body"><div class="ln-load">${ic('refresh', 'sm')} กำลังโหลด…</div></div></section>` : ''; },
+  async bindCard(el) {
+    const box = el.querySelector('.pu-card .pu-body'); if (!box) return;
+    const draw = async () => { box.innerHTML = await this.panel(); };
+    await draw(); this.bind(box, draw);
+  },
+  /* mobile: bottom sheet from the bell in the header */
+  async sheet() {
+    const ov = document.createElement('div'); ov.className = 'pu-ov';
+    ov.innerHTML = `<div class="pu-sheet" role="dialog" aria-label="แจ้งเตือน"><div class="pu-grab"></div><div class="pu-h">${bi('แจ้งเตือนบนมือถือ', 'PUSH NOTIFICATIONS')}<button class="mb-icon" data-x aria-label="ปิด">${ic('x', 'sm')}</button></div><div class="pu-body"></div></div>`;
+    document.body.appendChild(ov); requestAnimationFrame(() => ov.classList.add('on'));
+    const box = ov.querySelector('.pu-body'), draw = async () => { box.innerHTML = await this.panel(); };
+    await draw(); this.bind(box, async () => { await draw(); this.dot(); });
+    ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-x]')) { ov.classList.remove('on'); setTimeout(() => ov.remove(), 300); } });
+  },
+  async dot() { const b = document.querySelector('[data-push]'); if (b) b.classList.toggle('on', !!(await this.sub()) && Notification.permission === 'granted'); },
 };

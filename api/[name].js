@@ -4,6 +4,7 @@
    BACKEND=supabase : planned (phase 2)
    TEAM_CODE        : team password — every data call needs the signed cookie from POST /api/team_login (30 days) */
 const crypto = require('crypto');
+let webpush = null; try { webpush = require('web-push'); } catch (e) { }
 const NAME_RE = /^[a-z][a-z0-9_]{0,48}$/;
 const COOKIE = 'hrm_team', DAYS = 30;
 
@@ -58,9 +59,12 @@ module.exports = async function handler(req, res) {
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
   body = body || {};
   if (name === 'team_login') return teamLogin(req, res, body);
+  if (name === 'push_send') return pushSend(req, res, body);   // Apps Script → phones (key-protected, no cookie)
   if (name === 'team_logout') { setCookie(res, '', 0); return res.status(200).send(JSON.stringify({ ok: true, data: true })); }
   if (!signedIn(req)) return res.status(200).send(JSON.stringify({ ok: false, need_login: true, error: 'กรุณาใส่รหัสทีม' }));
   if (name === 'team_invite') return teamInvite(req, res, body);
+  if (name === 'push_key') return res.status(200).send(JSON.stringify(vapid() ? { ok: true, data: vapid().pub } : { ok: false, error: 'ยังไม่ได้ตั้ง GAS_KEY' }));
+  if (name === 'push_test') return pushTest(req, res, body);
   const backend = (process.env.BACKEND || 'gas').toLowerCase();
   try {
     if (backend === 'gas') return res.status(200).send(await viaGas(name, body, req));
@@ -80,6 +84,59 @@ async function teamInvite(req, res, body) {
   const days = Math.max(1, Math.min(365, Math.round(Number((body.args || [])[0]) || 30)));
   const exp = Date.now() + days * 864e5;
   return res.status(200).send(JSON.stringify({ ok: true, data: { gate: true, days, exp, url: base + '?join=' + exp + '.' + sign(exp, 'invite') } }));
+}
+
+/* ---------- Web Push ---------- */
+let _vapid = null;
+/** VAPID key pair derived from GAS_KEY (no extra setup) — changing GAS_KEY means phones turn notifications on again */
+function vapid() {
+  const seed = String(process.env.GAS_KEY || '');
+  if (!seed) return null;
+  if (_vapid && _vapid.seed === seed) return _vapid;
+  for (let i = 0; i < 16; i++) {
+    const d = Buffer.from(crypto.hkdfSync('sha256', seed, 'hrm-stock', 'vapid-' + i, 32));
+    try {
+      const ec = crypto.createECDH('prime256v1'); ec.setPrivateKey(d);
+      _vapid = { seed, priv: d.toString('base64url'), pub: ec.getPublicKey().toString('base64url') };
+      return _vapid;
+    } catch (e) { /* out of range — next counter */ }
+  }
+  return null;
+}
+function sameKey(given) {
+  const a = crypto.createHash('sha256').update(String(given || '')).digest(), b = crypto.createHash('sha256').update(String(process.env.GAS_KEY || '')).digest();
+  return !!process.env.GAS_KEY && crypto.timingSafeEqual(a, b);
+}
+function cleanSub(s) {
+  s = s || {}; const k = s.keys || {};
+  if (!/^https:\/\/[\w.-]+\//.test(String(s.endpoint || '')) || !k.p256dh || !k.auth) return null;
+  return { endpoint: String(s.endpoint), keys: { p256dh: String(k.p256dh), auth: String(k.auth) } };
+}
+async function sendAll(req, subs, msg) {
+  const v = vapid(); if (!webpush || !v) throw new Error('web-push not ready');
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'hrm-stock.vercel.app';
+  const opts = { TTL: 4 * 3600, urgency: 'high', vapidDetails: { subject: 'https://' + host, publicKey: v.pub, privateKey: v.priv } };
+  const payload = JSON.stringify({ title: String(msg.title || 'HRM STOCK').slice(0, 120), body: String(msg.body || '').slice(0, 400), url: String(msg.url || '/').slice(0, 200), tag: String(msg.tag || 'hrm').slice(0, 60) });
+  let sent = 0; const gone = [];
+  await Promise.all(subs.map(async s => {
+    try { await webpush.sendNotification(s, payload, opts); sent++; }
+    catch (e) { if (e.statusCode === 404 || e.statusCode === 410) gone.push(s.endpoint); else console.error('push', e.statusCode, String(e.body || e.message).slice(0, 200)); }
+  }));
+  return { sent, gone };
+}
+async function pushSend(req, res, body) {
+  if (!sameKey(body.key)) return res.status(403).send(JSON.stringify({ ok: false, error: 'forbidden' }));
+  const subs = (Array.isArray(body.subs) ? body.subs : []).slice(0, 500).map(cleanSub).filter(Boolean);
+  try { return res.status(200).send(JSON.stringify({ ok: true, data: await sendAll(req, subs, body.msg || {}) })); }
+  catch (e) { return res.status(200).send(JSON.stringify({ ok: false, error: e.message })); }
+}
+async function pushTest(req, res, body) {
+  const s = cleanSub((body.args || [])[0]);
+  if (!s) return res.status(200).send(JSON.stringify({ ok: false, error: 'เครื่องนี้ยังไม่ได้เปิดแจ้งเตือน' }));
+  try {
+    const r = await sendAll(req, [s], { title: 'HRM STOCK · ทดสอบแจ้งเตือน', body: 'เครื่องนี้จะได้รับการเตือนเมื่อกะเช้ายังไม่ลง STOCK', url: '/', tag: 'hrm-test' });
+    return res.status(200).send(JSON.stringify(r.sent ? { ok: true, data: true } : { ok: false, error: 'ส่งไม่สำเร็จ — ลองปิดแล้วเปิดแจ้งเตือนใหม่' }));
+  } catch (e) { return res.status(200).send(JSON.stringify({ ok: false, error: e.message })); }
 }
 
 async function viaGas(name, body, req) {

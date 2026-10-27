@@ -19,3 +19,21 @@ self.addEventListener('fetch', e => {
     return res;
   })));
 });
+
+/* ---------- push: "ทีม X ยังไม่ลง STOCK" ---------- */
+self.addEventListener('push', e => {
+  let m = {}; try { m = e.data ? e.data.json() : {}; } catch (er) { m = { body: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(m.title || 'HRM STOCK', {
+    body: m.body || '', tag: m.tag || 'hrm', renotify: true, icon: '/icons/icon-192.png', badge: '/icons/maskable-192.png',
+    data: { url: m.url || '/' }, vibrate: [120, 60, 120],
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || '/', location.origin).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    const w = list.find(c => c.url.startsWith(location.origin));
+    if (w) { w.focus(); return w.navigate(url).catch(() => { }); }
+    return self.clients.openWindow(url);
+  }));
+});
