@@ -333,8 +333,21 @@ const App = {
   info: null, page: 'home', params: {}, rev: null, online: true, badges: {},
   get today() { return this.info?.today || iso(new Date()); },
   get officer() { return this.info?.role === 'officer'; },
+  /** startup failed (no internet / server down) — explain, retry by hand or as soon as the connection is back */
+  offline(msg) {
+    const off = navigator.onLine === false;
+    $('#root').innerHTML = `<div class="setup"><div class="card off-card">
+      <span class="mark">${art('logo', 44)}</span>
+      <div class="off-t">${bi(off ? 'ไม่มีอินเทอร์เน็ต' : 'เชื่อมต่อระบบไม่ได้', off ? 'OFFLINE' : 'CANNOT REACH SERVER')}</div>
+      <p class="muted">${off ? 'เครื่องนี้ยังไม่ได้ต่ออินเทอร์เน็ต' : esc(msg || 'เซิร์ฟเวอร์ไม่ตอบกลับ')}</p>
+      <p class="hint">ข้อมูล STOCK อยู่บน Google Sheet ต้องออนไลน์จึงจะดูหรือบันทึกได้ · ระบบจะเปิดให้เองเมื่ออินเทอร์เน็ตกลับมา</p>
+      <button class="btn btn-primary" id="off-retry">${ic('refresh', 'sm')}ลองใหม่</button></div></div>`;
+    $('#off-retry').onclick = () => location.reload();
+    window.addEventListener('online', () => location.reload(), { once: true });
+  },
   async start() {
     try { this.info = await api('app_info'); } catch (e) { this.info = { ready: false, error: e.message }; }
+    if (!this.info.ready && IS_GAS) return this.offline(this.info.error);   // Google / web: nothing to set up — the server is just unreachable
     if (!this.info.ready) return Setup.show(1);
     if (typeof Widget !== 'undefined' && Widget.want() && this.info.has_data) return Widget.start();   // desktop widget window
     if (typeof Mobile !== 'undefined' && this.info.has_data && Mobile.want()) return Mobile.start();
