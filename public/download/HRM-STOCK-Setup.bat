@@ -1072,7 +1072,9 @@ try {
   $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
   $wx = [Math]::Max(0, $wa.Right - 404); $wy = $wa.Top + 60
   $base = $url.Split('?')[0]
-  $appArgs = "--app=$url --start-maximized"
+  # full screen size (1920×1080 or whatever this screen is), opened maximized
+  $sw = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width; $sh = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height
+  $appArgs = "--app=$url --window-position=0,0 --window-size=$sw,$sh --start-maximized"
   $wgArgs  = "--app=${base}?view=widget --window-size=380,640 --window-position=$wx,$wy"
 
   $ws = New-Object -ComObject WScript.Shell
