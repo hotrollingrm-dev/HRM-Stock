@@ -134,6 +134,8 @@ def write_xlsx(path, months_data, blank=False, title=""):
                 src = 6 if d == 1 else 35 if d == nd else 7 if d < nd else 36
                 _copy_rows(tpl, ws, src, src, h + 3 + d - src)
             ws.cell(h, 1, label)
+            for d in range(1, nd + 1):                # day numbers (column A) — independent of the slots
+                ws.cell(h + 3 + d, 1, d)
             for i, c in enumerate(COLS):
                 ws.cell(h + 3, c, "รับสินค้า")
                 ws.cell(h + 3, c + 1, "ทั้งหมด")
@@ -149,14 +151,19 @@ def write_xlsx(path, months_data, blank=False, title=""):
                     ws.cell(h + 1, c, f"จำนวนคงเหลือที่ต้องสั่ง : {_n(m['reorder_point'])} {_unit(m['unit'], m['reorder_point'])}")
                     moq = " (MOQ)" if m.get("moq") and m["moq"] == m["order_qty"] else ""
                     ws.cell(h + 2, c, f"จำนวนที่สั่งซื้อ : {_n(m['order_qty'])} {_unit(m['unit'], m['order_qty'])}{moq}")
-                else:
-                    ws.cell(h, c).fill = PatternFill(fill_type=None)
+                else:                                 # no material in this slot → leave it completely empty
+                    for rng in [g for g in ws.merged_cells.ranges
+                                if h <= g.min_row and g.max_row <= h + 35 and c <= g.min_col and g.max_col <= c + 4]:
+                        ws.unmerge_cells(str(rng))
+                    for r in range(h, h + 36):
+                        for k in range(5):
+                            ws.cell(r, c + k).style = "Normal"
+                            ws.cell(r, c + k).value = None
+                    continue
                 for d in range(1, 32):
                     r = h + 3 + d
                     if d > nd:
                         continue
-                    if i == 0:
-                        ws.cell(r, 1, d)
                     if not m or blank:
                         continue
                     L = get_column_letter
