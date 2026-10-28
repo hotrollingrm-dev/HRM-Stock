@@ -17,10 +17,7 @@ if errorlevel 2 goto uninstall
 
 :install
 set "HRM_MODE=install"
-set "HRM_URL="
-echo.
-echo   ลิงก์ระบบ  (กด Enter = https://hrm-stock.vercel.app/)
-set /p "HRM_URL=   ลิงก์ : "
+if not defined HRM_URL set "HRM_URL=https://hrm-stock.vercel.app/"
 echo.
 choice /c YN /n /m "   เปิด Widget ลอยข้างจอทุกครั้งที่เปิดเครื่อง? [Y/N] : "
 if errorlevel 2 (set "HRM_AUTOSTART=N") else (set "HRM_AUTOSTART=Y")
@@ -1036,6 +1033,7 @@ try {
   $mode = $env:HRM_MODE
   $url = ($env:HRM_URL + '').Trim(); if (-not $url) { $url = 'https://hrm-stock.vercel.app/' }
   if ($url -notmatch '^https?://') { $url = 'https://' + $url }
+  if ($url -notmatch '^https?://[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?(/|$)') { $url = 'https://hrm-stock.vercel.app/' }   # typo / stray key → the real site
   if (-not $url.EndsWith('/') -and $url -notmatch '\?') { $url += '/' }
   $dir     = Join-Path $env:LOCALAPPDATA 'HRMStock'
   $desk    = [Environment]::GetFolderPath('Desktop')
@@ -1073,8 +1071,8 @@ try {
   $wx = [Math]::Max(0, $wa.Right - 404); $wy = $wa.Top + 60
   $base = $url.Split('?')[0]
   # full screen size (1920×1080 or whatever this screen is), opened maximized
-  $sw = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width; $sh = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height
-  $appArgs = "--app=$url --window-position=0,0 --window-size=$sw,$sh --start-maximized"
+  # the page itself fills the screen on open (?desk=1) — works with any display scaling
+  $appArgs = "--app=$($url.Split('?')[0])?desk=1 --start-maximized"
   $wgArgs  = "--app=${base}?view=widget --window-size=380,640 --window-position=$wx,$wy"
 
   $ws = New-Object -ComObject WScript.Shell

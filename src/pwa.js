@@ -2,6 +2,12 @@
 (function () {
   'use strict';
   const get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  // desktop shortcut (?desk=1): fill the whole screen, whatever the display scaling
+  if (new URLSearchParams(location.search).get('desk') === '1') {
+    const fill = () => { try { window.moveTo(screen.availLeft || 0, screen.availTop || 0); window.resizeTo(screen.availWidth, screen.availHeight); } catch (e) { } };
+    fill(); setTimeout(fill, 300);
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { }
+  }
   const set = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
   if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
