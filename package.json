@@ -1,6 +1,6 @@
 {
   "name": "hrm-stock-web",
-  "version": "3.37.0",
+  "version": "3.38.0",
   "private": true,
   "description": "HRM STOCK CONTROL MANAGEMENT — Vercel web app (frontend + API proxy to Google Apps Script)",
   "engines": { "node": ">=18" },
