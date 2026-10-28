@@ -39,7 +39,7 @@ exit /b
 #PS-START
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
-$ICO = (@'
+$IconB64 = (@'
 AAABAAcAEBAAAAAAIADbAgAAdgAAABgYAAAAACAArQQAAFEDAAAgIAAAAAAgAB0HAAD+BwAAMDAA
 AAAAIACKCwAAGw8AAEBAAAAAACAA6BEAAKUaAACAgAAAAAAgAGktAACNLAAAAAAAAAAAIACSggAA
 9lkAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAqJJREFUeJxVkj+IXVUQh785
@@ -1064,8 +1064,8 @@ try {
 
   New-Item -ItemType Directory -Force $dir  | Out-Null
   New-Item -ItemType Directory -Force $menu | Out-Null
-  $ico = Join-Path $dir 'hrm-stock.ico'
-  [IO.File]::WriteAllBytes($ico, [Convert]::FromBase64String($ICO))
+  $iconPath = Join-Path $dir 'hrm-stock.ico'
+  [IO.File]::WriteAllBytes($iconPath, [Convert]::FromBase64String($IconB64))
 
   # widget: small window at the right edge of the main screen
   Add-Type -AssemblyName System.Windows.Forms
@@ -1078,7 +1078,7 @@ try {
   $ws = New-Object -ComObject WScript.Shell
   function New-Lnk($path, $arguments, $desc) {
     $l = $ws.CreateShortcut($path); $l.TargetPath = $b; $l.Arguments = $arguments
-    $l.IconLocation = "$ico,0"; $l.Description = $desc; $l.WorkingDirectory = $dir; $l.Save()
+    $l.IconLocation = "$iconPath,0"; $l.Description = $desc; $l.WorkingDirectory = $dir; $l.Save()
   }
   foreach ($d in @($desk, $menu)) {
     New-Lnk (Join-Path $d 'HRM STOCK.lnk')        $appArgs 'HRM STOCK CONTROL MANAGEMENT'
