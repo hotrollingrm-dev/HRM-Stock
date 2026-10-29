@@ -1,5 +1,5 @@
 /* HRM STOCK · service worker — app shell offline, data always live (/api is never cached) */
-const V = '1793240192', CACHE = 'hrm-stock-' + V;
+const V = '1793240588', CACHE = 'hrm-stock-' + V;
 const SHELL = ['/', '/assets/app.css?v=' + V, '/assets/data.js?v=' + V, '/assets/app.js?v=' + V, '/assets/pwa.js?v=' + V, '/manifest.webmanifest', '/icons/icon-192.png'];
 
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
