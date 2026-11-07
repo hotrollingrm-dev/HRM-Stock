@@ -18,3 +18,17 @@
 .mo-banner .tb-more{align-self:stretch;height:auto;margin:0;border-radius:0;display:block;width:100%;text-align:center;font:inherit;font-size:11.5px;font-weight:800;color:#E8630F;padding:5px 0 3px;border:0;border-top:1px dashed #E4E1D8;background:none;cursor:pointer}
 .tb-list.none{display:flex;align-items:center;gap:6px;padding:8px 10px}.tb-list.none svg{width:15px;height:15px;color:#8C8C8C;flex:none}.mo-banner .tb-list.none span{font-size:12px;font-weight:700;color:#4A4A4A}
 
+/* ===== patch 002-desk-arrivals.css ===== */
+/* v3.62 · deliveries list in the computer's cat frame: one wide card along the bottom, rows side by side */
+.dk-cat.has-tb{flex-wrap:wrap}
+.dk-cat .tb-list{flex:0 0 calc(100% - 28px);margin:-10px 14px 14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:18px;padding:8px 12px 6px}
+.dk-cat .tb-h{grid-column:1/-1}
+.dk-cat .tb-more{grid-column:1/-1}
+.mo-banner.dk-cat .tb-r{border-top:0;padding:7px 0}
+.mo-banner.dk-cat .tb-r>b{font-size:13px}.mo-banner.dk-cat .tb-r .q{font-size:14px}
+.dk-cat .mo-pic.xs{width:30px;height:30px}
+.mo-banner.dk-cat .tb-h b{font-size:14px}
+.dk-cat .tb-list.none{display:flex;flex:0 0 auto;margin:-10px 14px 14px auto;margin-left:22px}
+.dk-cat.has-tb .g-ring{top:22px;margin-top:0}
+.dk-cat.has-tb .g-yarn,.dk-cat.has-tb .g-paws{display:none}
+
