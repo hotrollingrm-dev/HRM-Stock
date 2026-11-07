@@ -32,3 +32,11 @@
 .dk-cat.has-tb .g-ring{top:22px;margin-top:0}
 .dk-cat.has-tb .g-yarn,.dk-cat.has-tb .g-paws{display:none}
 
+/* ===== patch 003-push-help.css ===== */
+/* v3.63 · why push can't be turned on here */
+.pu-why{margin:0 0 12px;padding:12px 14px;border-radius:12px;background:#FFF3CC;border:1.5px solid #141414;color:#141414;font-size:14px;line-height:1.5}
+.pu-why b{display:block;font-weight:800;margin-bottom:4px}
+.pu-why ol{margin:4px 0 0;padding-left:20px}.pu-why li{margin:3px 0}.pu-why li b{display:inline}
+.pu-why.warn{background:#FDE8E8}
+.pu-why span{display:block;font-size:13px;color:#4A4A4A}
+
