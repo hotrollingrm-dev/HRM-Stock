@@ -1,4 +1,4 @@
-const HRM_BUILD={v:"3.64.0",d:"2026-11-08"},$=(t,e=document)=>e.querySelector(t),$$=(t,e=document)=>[...e.querySelectorAll(t)],esc=t=>String(t??"").replace(/[&<>"']/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[e]),Perf={mode(){return localStorageGet("perf")||"auto"},lite(){return document.documentElement.classList.contains("lite")},init(){const t=this.mode(),e=navigator.hardwareConcurrency||8,s=navigator.deviceMemory||8;let a=t==="lite";t==="auto"&&(a=localStorageGet("perfAuto")==="lite"||e<=4||s<=4||matchMedia("(prefers-reduced-motion: reduce)").matches||this.softGpu()),document.documentElement.classList.toggle("lite",!!a),t==="auto"&&!a&&setTimeout(()=>this.probe(),3e3)},softGpu(){try{const t=document.createElement("canvas").getContext("webgl");if(!t)return!0;const e=t.getExtension("WEBGL_debug_renderer_info"),s=e?String(t.getParameter(e.UNMASKED_RENDERER_WEBGL)):"";return/swiftshader|llvmpipe|softpipe|basic render|software/i.test(s)}catch{return!1}},probe(){let t=0;const e=performance.now(),s=()=>{t++;const a=performance.now()-e;if(a<1500)return requestAnimationFrame(s);a/t>28&&(localStorageSet("perfAuto","lite"),document.documentElement.classList.add("lite"),typeof toast=="function"&&toast("เปิดโหมดลื่นอัตโนมัติ","เครื่องนี้ทำงานช้า — ปิดเอฟเฟกต์กระจกให้แล้ว · เปลี่ยนได้ที่ ตั้งค่า","info"))};requestAnimationFrame(s)},set(t){localStorageSet("perf",t),t!=="auto"&&localStorageSet("perfAuto",""),this.init()}};Perf.init();function debounce(t,e=140){let s;return function(...a){clearTimeout(s),s=setTimeout(()=>t.apply(this,a),e)}}const Outbox={K:"outbox",busy:null,all(){try{return JSON.parse(localStorageGet(this.K)||"[]")}catch{return[]}},save(t){localStorageSet(this.K,JSON.stringify(t)),this.paint()},pending(t){return this.all().find(e=>e.name==="day_save"&&e.args[0]===t&&!e.error)},add(t,e,s){const a=this.all().filter(n=>!(n.name===t&&n.args[0]===e[0]));return a.push({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),name:t,args:e,label:s||"",at:Date.now()}),this.save(a),this.flush(),a.length},flush(){return this.busy?this.busy:(this.busy=(async()=>{let t=!1;for(;;){const e=this.all(),s=e.find(a=>!a.error);if(!s)break;try{await api(s.name,...s.args),t=!0,this.save(this.all().filter(a=>a.id!==s.id))}catch(a){if(a.network)break;this.save(this.all().map(n=>n.id===s.id?Object.assign({},n,{error:a.message}):n)),toast("ส่งข้อมูลไม่สำเร็จ",`${esc(s.label)} — ${esc(a.message)}`,"err")}}if(t){toast("ส่งข้อมูลแล้ว ✓","บันทึกขึ้นระบบเรียบร้อย","info");try{await App.bumpRev()}catch{}}return this.busy=null,!this.all().some(e=>!e.error)})(),this.busy)},paint(){const t=this.all(),e=t.length,s=t.some(a=>a.error);document.querySelectorAll("[data-outbox]").forEach(a=>{a.classList.toggle("hidden",!e),a.classList.toggle("bad",s);const n=a.querySelector("b");n&&(n.textContent=e)})},chip(){return`<button class="ob-chip hidden" data-outbox title="ข้อมูลที่บันทึกไว้ในเครื่อง รอส่งขึ้นระบบ — กดเพื่อส่งตอนนี้">${ic("upload","sm")}รอส่ง <b>0</b></button>`},init(){window.addEventListener("online",()=>this.flush()),setInterval(()=>{this.all().some(t=>!t.error)&&!document.hidden&&this.flush()},2e4),document.addEventListener("click",t=>{if(!t.target.closest("[data-outbox]"))return;const s=this.all().filter(a=>a.error);s.length&&(toast("รายการที่ส่งไม่ผ่าน",s.map(a=>esc(a.label)+": "+esc(a.error)).join("<br>")+"<br>แก้ไขแล้วบันทึกใหม่ — รายการนี้ถูกลบออกจากคิว","err"),this.save(this.all().filter(a=>!a.error))),this.flush()}),this.all().length&&setTimeout(()=>this.flush(),1500)}},Warm={on(){return IS_GAS},key(t){return"warm."+t+"."+(localStorageGet("token")?"o":"p")},get(t){if(!this.on())return null;try{const e=JSON.parse(localStorageGet(this.key(t))||"null");return e&&Date.now()-e.at<7*864e5?e.d:null}catch{return null}},set(t,e){if(!(!this.on()||!e))try{localStorageSet(this.key(t),JSON.stringify({at:Date.now(),d:e}))}catch{}}},IS_WEB=!!window.HRM_WEB,IS_GAS=IS_WEB||!!(window.google&&window.google.script&&window.google.script.run),SRC_LABEL=IS_GAS?"Google Sheets":"ไดร์ฟกลาง",bridgeReady=new Promise(t=>{if(IS_GAS||window.pywebview?.api)return t(!0);let e=!1;window.addEventListener("pywebviewready",()=>{e=!0,t(!0)}),setTimeout(async()=>{if(e||window.pywebview?.api)return t(!0);try{const s=await fetch("/api/get_rev",{method:"POST",body:"[]"});s.ok&&(s.headers.get("content-type")||"").includes("json")&&t(!0)}catch{}},250)});function gasCtx(){return{token:localStorageGet("token")||"",machine:localStorageGet("machine")||"",name:localStorageGet("officerName")||"",today_override:window.HRM_TODAY||""}}function gasCall(t,e){return IS_WEB?fetch("/api/"+encodeURIComponent(t),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({args:e,ctx:gasCtx()})}).then(s=>s.text()):new Promise((s,a)=>google.script.run.withSuccessHandler(s).withFailureHandler(a).api(t,JSON.stringify(e),JSON.stringify(gasCtx())))}const API_READS=new Set(["get_rev","app_info","dashboard","day_get","days_status","missing_days","month_get","stock_list","orders_list","receipts_list","materials_list","material_check","a3_pages","documents_list","export_range","notes_list","shop_catalog","shop_requests","adjust_list","spend_summary","price_history","stock_trend","backup_list","backup_schedule_get","shop_request_get","audit_list","scan_open","open_folder"]),READ_CACHE=new Set(["stock_list","orders_list","receipts_list","materials_list","days_status","missing_days","month_get","day_get","documents_list","notes_list","shop_catalog","shop_requests","shop_request_get","adjust_list","spend_summary","price_history","stock_trend","audit_list","a3_pages","backup_list"]),RC={m:new Map,key(t,e){const s=typeof App<"u"?App:null;return!IS_GAS||!s||s.rev==null||s._noCache||!READ_CACHE.has(t)?null:t+"|"+JSON.stringify(e)+"|"+s.rev+"|"+(s.info&&s.info.today)+"|"+(localStorageGet("token")?"o":"p")},get(t){if(!t)return;const e=this.m.get(t);return e===void 0?void 0:JSON.parse(e)},put(t,e){if(t)try{this.m.set(t,JSON.stringify(e)),this.m.size>80&&this.m.delete(this.m.keys().next().value)}catch{}},clear(){this.m.clear()}};async function api(t,...e){await bridgeReady;const s=RC.key(t,e),a=RC.get(s);if(a!==void 0)return a;let n;try{IS_GAS?n=JSON.parse(await gasCall(t,e)):window.pywebview?.api?n=await window.pywebview.api.call(t,e):n=await(await fetch("/api/"+t,{method:"POST",body:JSON.stringify(e)})).json()}catch{App.setOnline(!1);const l=new Error(IS_GAS?"เชื่อมต่อ Google ไม่ได้ — ตรวจสอบอินเทอร์เน็ต":"เชื่อมต่อข้อมูลไม่ได้ — ตรวจสอบไดร์ฟกลาง");throw l.network=!0,l}if(n.ok&&/^(app_info|set_role|set_machine|set_officer_name)$/.test(t)&&n.data&&n.data.ready!==void 0&&(n.ctx&&"token"in n.ctx&&localStorageSet("token",n.ctx.token||""),Warm.set("info",n.data)),n.ctx&&("token"in n.ctx&&localStorageSet("token",n.ctx.token||""),"machine"in n.ctx&&localStorageSet("machine",n.ctx.machine||""),"name"in n.ctx&&localStorageSet("officerName",n.ctx.name||"")),!API_READS.has(t)&&typeof App<"u"&&(App._dash=null,RC.clear()),n.need_login&&IS_WEB){TeamGate.show();const i=new Error(n.error||"กรุณาใส่รหัสทีม");throw i.needLogin=!0,i}if(!n.ok)throw new Error(n.error||"เกิดข้อผิดพลาด");return RC.put(s,n.data),n.data}function openUrl(t){t&&window.open(t,"_blank","noopener")}async function printHtml(t,e){if(await bridgeReady,!IS_GAS&&window.pywebview?.api)return window.pywebview.api.print_html(t,e);const s=typeof FONT_DATA<"u"?t.replace(/__FONTS__([\w.-]+)/g,(n,i)=>FONT_DATA[i]||""):t.replaceAll("__FONTS__","fonts/"),a=document.createElement("iframe");a.style.cssText="position:fixed;width:0;height:0;border:0;right:0;bottom:0",document.body.appendChild(a),a.contentDocument.open(),a.contentDocument.write(s),a.contentDocument.close(),setTimeout(()=>a.remove(),6e4)}function downloadB64(t,e,s){const a=atob(t),n=new Uint8Array(a.length);for(let o=0;o<a.length;o++)n[o]=a.charCodeAt(o);const i=URL.createObjectURL(new Blob([n],{type:s||"application/octet-stream"})),l=document.createElement("a");l.href=i,l.download=e,document.body.appendChild(l),l.click(),setTimeout(()=>{URL.revokeObjectURL(i),l.remove()},4e3)}const TeamGate={shown:!1,async join(){const t=new URLSearchParams(location.search),e=t.get("join");if(!e)return!1;t.delete("join"),history.replaceState(null,"",location.pathname+(t.toString()?"?"+t:"")+location.hash);try{const s=await(await fetch("/api/team_login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({join:e})})).json();return s.ok?!1:(this.show(s.error),!0)}catch{return!1}},show(t){if(this.shown)return;this.shown=!0;const e=document.body.dataset.view==="widget",s=new Date,a=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];document.documentElement.getAttribute("data-skin")||document.documentElement.setAttribute("data-skin","rose"),document.getElementById("root").innerHTML=`<div class="tg2 ${e?"w":""}">
+const HRM_BUILD={v:"3.65.0",d:"2026-11-08"},$=(t,e=document)=>e.querySelector(t),$$=(t,e=document)=>[...e.querySelectorAll(t)],esc=t=>String(t??"").replace(/[&<>"']/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[e]),Perf={mode(){return localStorageGet("perf")||"auto"},lite(){return document.documentElement.classList.contains("lite")},init(){const t=this.mode(),e=navigator.hardwareConcurrency||8,s=navigator.deviceMemory||8;let a=t==="lite";t==="auto"&&(a=localStorageGet("perfAuto")==="lite"||e<=4||s<=4||matchMedia("(prefers-reduced-motion: reduce)").matches||this.softGpu()),document.documentElement.classList.toggle("lite",!!a),t==="auto"&&!a&&setTimeout(()=>this.probe(),3e3)},softGpu(){try{const t=document.createElement("canvas").getContext("webgl");if(!t)return!0;const e=t.getExtension("WEBGL_debug_renderer_info"),s=e?String(t.getParameter(e.UNMASKED_RENDERER_WEBGL)):"";return/swiftshader|llvmpipe|softpipe|basic render|software/i.test(s)}catch{return!1}},probe(){let t=0;const e=performance.now(),s=()=>{t++;const a=performance.now()-e;if(a<1500)return requestAnimationFrame(s);a/t>28&&(localStorageSet("perfAuto","lite"),document.documentElement.classList.add("lite"),typeof toast=="function"&&toast("เปิดโหมดลื่นอัตโนมัติ","เครื่องนี้ทำงานช้า — ปิดเอฟเฟกต์กระจกให้แล้ว · เปลี่ยนได้ที่ ตั้งค่า","info"))};requestAnimationFrame(s)},set(t){localStorageSet("perf",t),t!=="auto"&&localStorageSet("perfAuto",""),this.init()}};Perf.init();function debounce(t,e=140){let s;return function(...a){clearTimeout(s),s=setTimeout(()=>t.apply(this,a),e)}}const Outbox={K:"outbox",busy:null,all(){try{return JSON.parse(localStorageGet(this.K)||"[]")}catch{return[]}},save(t){localStorageSet(this.K,JSON.stringify(t)),this.paint()},pending(t){return this.all().find(e=>e.name==="day_save"&&e.args[0]===t&&!e.error)},add(t,e,s){const a=this.all().filter(n=>!(n.name===t&&n.args[0]===e[0]));return a.push({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),name:t,args:e,label:s||"",at:Date.now()}),this.save(a),this.flush(),a.length},flush(){return this.busy?this.busy:(this.busy=(async()=>{let t=!1;for(;;){const e=this.all(),s=e.find(a=>!a.error);if(!s)break;try{await api(s.name,...s.args),t=!0,this.save(this.all().filter(a=>a.id!==s.id))}catch(a){if(a.network)break;this.save(this.all().map(n=>n.id===s.id?Object.assign({},n,{error:a.message}):n)),toast("ส่งข้อมูลไม่สำเร็จ",`${esc(s.label)} — ${esc(a.message)}`,"err")}}if(t){toast("ส่งข้อมูลแล้ว ✓","บันทึกขึ้นระบบเรียบร้อย","info");try{await App.bumpRev()}catch{}}return this.busy=null,!this.all().some(e=>!e.error)})(),this.busy)},paint(){const t=this.all(),e=t.length,s=t.some(a=>a.error);document.querySelectorAll("[data-outbox]").forEach(a=>{a.classList.toggle("hidden",!e),a.classList.toggle("bad",s);const n=a.querySelector("b");n&&(n.textContent=e)})},chip(){return`<button class="ob-chip hidden" data-outbox title="ข้อมูลที่บันทึกไว้ในเครื่อง รอส่งขึ้นระบบ — กดเพื่อส่งตอนนี้">${ic("upload","sm")}รอส่ง <b>0</b></button>`},init(){window.addEventListener("online",()=>this.flush()),setInterval(()=>{this.all().some(t=>!t.error)&&!document.hidden&&this.flush()},2e4),document.addEventListener("click",t=>{if(!t.target.closest("[data-outbox]"))return;const s=this.all().filter(a=>a.error);s.length&&(toast("รายการที่ส่งไม่ผ่าน",s.map(a=>esc(a.label)+": "+esc(a.error)).join("<br>")+"<br>แก้ไขแล้วบันทึกใหม่ — รายการนี้ถูกลบออกจากคิว","err"),this.save(this.all().filter(a=>!a.error))),this.flush()}),this.all().length&&setTimeout(()=>this.flush(),1500)}},Warm={on(){return IS_GAS},key(t){return"warm."+t+"."+(localStorageGet("token")?"o":"p")},get(t){if(!this.on())return null;try{const e=JSON.parse(localStorageGet(this.key(t))||"null");return e&&Date.now()-e.at<7*864e5?e.d:null}catch{return null}},set(t,e){if(!(!this.on()||!e))try{localStorageSet(this.key(t),JSON.stringify({at:Date.now(),d:e}))}catch{}}},IS_WEB=!!window.HRM_WEB,IS_GAS=IS_WEB||!!(window.google&&window.google.script&&window.google.script.run),SRC_LABEL=IS_GAS?"Google Sheets":"ไดร์ฟกลาง",bridgeReady=new Promise(t=>{if(IS_GAS||window.pywebview?.api)return t(!0);let e=!1;window.addEventListener("pywebviewready",()=>{e=!0,t(!0)}),setTimeout(async()=>{if(e||window.pywebview?.api)return t(!0);try{const s=await fetch("/api/get_rev",{method:"POST",body:"[]"});s.ok&&(s.headers.get("content-type")||"").includes("json")&&t(!0)}catch{}},250)});function gasCtx(){return{token:localStorageGet("token")||"",machine:localStorageGet("machine")||"",name:localStorageGet("officerName")||"",today_override:window.HRM_TODAY||""}}function gasCall(t,e){return IS_WEB?fetch("/api/"+encodeURIComponent(t),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({args:e,ctx:gasCtx()})}).then(s=>s.text()):new Promise((s,a)=>google.script.run.withSuccessHandler(s).withFailureHandler(a).api(t,JSON.stringify(e),JSON.stringify(gasCtx())))}const API_READS=new Set(["get_rev","app_info","dashboard","day_get","days_status","missing_days","month_get","stock_list","orders_list","receipts_list","materials_list","material_check","a3_pages","documents_list","export_range","notes_list","shop_catalog","shop_requests","adjust_list","spend_summary","price_history","stock_trend","backup_list","backup_schedule_get","shop_request_get","audit_list","scan_open","open_folder"]),READ_CACHE=new Set(["stock_list","orders_list","receipts_list","materials_list","days_status","missing_days","month_get","day_get","documents_list","notes_list","shop_catalog","shop_requests","shop_request_get","adjust_list","spend_summary","price_history","stock_trend","audit_list","a3_pages","backup_list"]),RC={m:new Map,key(t,e){const s=typeof App<"u"?App:null;return!IS_GAS||!s||s.rev==null||s._noCache||!READ_CACHE.has(t)?null:t+"|"+JSON.stringify(e)+"|"+s.rev+"|"+(s.info&&s.info.today)+"|"+(localStorageGet("token")?"o":"p")},get(t){if(!t)return;const e=this.m.get(t);return e===void 0?void 0:JSON.parse(e)},put(t,e){if(t)try{this.m.set(t,JSON.stringify(e)),this.m.size>80&&this.m.delete(this.m.keys().next().value)}catch{}},clear(){this.m.clear()}};async function api(t,...e){await bridgeReady;const s=RC.key(t,e),a=RC.get(s);if(a!==void 0)return a;let n;try{IS_GAS?n=JSON.parse(await gasCall(t,e)):window.pywebview?.api?n=await window.pywebview.api.call(t,e):n=await(await fetch("/api/"+t,{method:"POST",body:JSON.stringify(e)})).json()}catch{App.setOnline(!1);const l=new Error(IS_GAS?"เชื่อมต่อ Google ไม่ได้ — ตรวจสอบอินเทอร์เน็ต":"เชื่อมต่อข้อมูลไม่ได้ — ตรวจสอบไดร์ฟกลาง");throw l.network=!0,l}if(n.ok&&/^(app_info|set_role|set_machine|set_officer_name)$/.test(t)&&n.data&&n.data.ready!==void 0&&(n.ctx&&"token"in n.ctx&&localStorageSet("token",n.ctx.token||""),Warm.set("info",n.data)),n.ctx&&("token"in n.ctx&&localStorageSet("token",n.ctx.token||""),"machine"in n.ctx&&localStorageSet("machine",n.ctx.machine||""),"name"in n.ctx&&localStorageSet("officerName",n.ctx.name||"")),!API_READS.has(t)&&typeof App<"u"&&(App._dash=null,RC.clear()),n.need_login&&IS_WEB){TeamGate.show();const i=new Error(n.error||"กรุณาใส่รหัสทีม");throw i.needLogin=!0,i}if(!n.ok)throw new Error(n.error||"เกิดข้อผิดพลาด");return RC.put(s,n.data),n.data}function openUrl(t){t&&window.open(t,"_blank","noopener")}async function printHtml(t,e){if(await bridgeReady,!IS_GAS&&window.pywebview?.api)return window.pywebview.api.print_html(t,e);const s=typeof FONT_DATA<"u"?t.replace(/__FONTS__([\w.-]+)/g,(n,i)=>FONT_DATA[i]||""):t.replaceAll("__FONTS__","fonts/"),a=document.createElement("iframe");a.style.cssText="position:fixed;width:0;height:0;border:0;right:0;bottom:0",document.body.appendChild(a),a.contentDocument.open(),a.contentDocument.write(s),a.contentDocument.close(),setTimeout(()=>a.remove(),6e4)}function downloadB64(t,e,s){const a=atob(t),n=new Uint8Array(a.length);for(let o=0;o<a.length;o++)n[o]=a.charCodeAt(o);const i=URL.createObjectURL(new Blob([n],{type:s||"application/octet-stream"})),l=document.createElement("a");l.href=i,l.download=e,document.body.appendChild(l),l.click(),setTimeout(()=>{URL.revokeObjectURL(i),l.remove()},4e3)}const TeamGate={shown:!1,async join(){const t=new URLSearchParams(location.search),e=t.get("join");if(!e)return!1;t.delete("join"),history.replaceState(null,"",location.pathname+(t.toString()?"?"+t:"")+location.hash);try{const s=await(await fetch("/api/team_login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({join:e})})).json();return s.ok?!1:(this.show(s.error),!0)}catch{return!1}},show(t){if(this.shown)return;this.shown=!0;const e=document.body.dataset.view==="widget",s=new Date,a=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];document.documentElement.getAttribute("data-skin")||document.documentElement.setAttribute("data-skin","rose"),document.getElementById("root").innerHTML=`<div class="tg2 ${e?"w":""}">
       <div class="tg2-l">
         <form class="tg2-glass tg-f" autocomplete="on">
           <div class="tg2-top"><span class="tg2-mark">${typeof art=="function"?art("logo",26):""}</span><span class="tg2-pill">HRM STOCK</span></div>
@@ -1518,76 +1518,140 @@ const HRM_BUILD={v:"3.64.0",d:"2026-11-08"},$=(t,e=document)=>e.querySelector(t)
 })();
 
 /* ===== patch 004-delivered-ack.js ===== */
-/* v3.64 · Timeline สั่งซื้อ Material
-   1) delivery day reached (today / overdue) → ask “รับของแล้วหรือยัง?”  [รับแล้ว] opens the usual receive form · [ยังไม่มา] Officer sets a new date, Operator hides it for today
-   2) fully received → the order stays at “จัดส่งสำเร็จ” and the Officer is notified (server) · Officer “รับทราบ” → it leaves the timeline */
+/* v3.64–3.65 · Timeline สั่งซื้อ (Material + อุปกรณ์)
+   · delivery day reached (today / overdue) → the row itself asks “รับของแล้วหรือยัง?”
+       [รับแล้ว] Material → the usual receive form · อุปกรณ์ → marked delivered
+       [ยังไม่มา] Officer sets a new date · Operator hides the question for today
+   · received → the row stays at “จัดส่งสำเร็จ”, the Officer is notified (server); Officer [รับทราบ] → it leaves the timeline */
 const Dlv = {
+  d: null,
   skipKey() { return 'dlvSkip:' + App.today; },
   skipped() { try { return new Set(JSON.parse(localStorageGet(this.skipKey()) || '[]')); } catch (e) { return new Set(); } },
   skip(id) { const s = this.skipped(); s.add(id); localStorageSet(this.skipKey(), JSON.stringify([...s])); },
-  due(d) { const sk = this.skipped(); return (d.open_orders || []).filter(o => (o.status === 'today' || o.status === 'overdue') && (App.officer || !sk.has(o.id))); },
-  pic(m, cls) { return typeof MOff !== 'undefined' ? MOff.pic(m || {}, cls || 'sm') : ''; },
-  late(o) { const n = dayDiff(App.today, o.expected_date); return o.status === 'today' ? 'ถึงวันส่งวันนี้' : `เลยกำหนด ${n} วัน · นัด ${fmtD(o.expected_date)}`; },
-  html(d, desk) {
-    const due = this.due(d), done = d.delivered || [];
-    if (!due.length && !done.length) return '';
-    const ask = due.length ? `<div class="dv-box dv-ask"><div class="dv-h"><span class="ic">${ic('truck', 'sm')}</span><div><b>ถึงวันส่งแล้ว — รับของแล้วหรือยัง?</b><small>กด รับแล้ว เพื่อบันทึกรับเข้า · ยังไม่มา ${App.officer ? 'เพื่อเลื่อนวันส่ง' : 'เพื่อซ่อนไว้ถึงพรุ่งนี้'}</small></div><span class="n">${due.length}</span></div>
-      ${due.map(o => `<div class="dv-r ${o.status}">${this.pic(o.material)}<span class="t"><b>${esc(o.material.name)}</b><small class="${o.status === 'overdue' ? 'bad' : ''}">${this.late(o)}</small><small>${esc(o.id)} · <span style="white-space:nowrap">${o.partial ? `รับแล้ว ${fmtN(o.received_qty)} / ${fmtN(o.ordered_qty)}` : `สั่ง ${fmtN(o.ordered_qty)}`} ${esc(o.material.unit)}</span></small></span>
-        <span class="q num">${fmtN(o.remaining_qty)}<small>${esc(o.material.unit)}</small></span>
-        <span class="b"><button class="dv-yes" data-dvyes="${esc(o.id)}">${ic('check', 'sm')}รับแล้ว</button><button class="dv-no" data-dvno="${esc(o.id)}">ยังไม่มา</button></span></div>`).join('')}</div>` : '';
-    const ok = done.length ? `<div class="dv-box dv-done"><div class="dv-h"><span class="ic g">${ic('check', 'sm')}</span><div><b>จัดส่งสำเร็จ</b><small>${App.officer ? 'กดรับทราบแล้วรายการจะออกจาก Timeline' : 'รอ Officer รับทราบ'}</small></div>${App.officer && done.length > 1 ? `<button class="dv-ackall" data-dvack="">รับทราบทั้งหมด</button>` : `<span class="n g">${done.length}</span>`}</div>
-      ${done.map(o => `<div class="dv-r ok">${this.pic(o.material)}<span class="t"><b>${esc(o.material.name)}</b><small>รับครบ ${fmtN(o.ordered_qty)} ${esc(o.material.unit)}${o.rcv_by ? ' · โดย ' + esc(o.rcv_by) : ''} · ${fmtD(o.done_date)}</small>
-          <span class="dv-trk">${['สั่งแล้ว', 'รับคำสั่ง', 'รอจัดส่ง', 'จัดส่งสำเร็จ'].map((s, i) => `<i class="${i === 3 ? 'last' : ''}">${ic('check', 'sm')}</i><em>${s}</em>`).join('')}</span></span>
-        ${App.officer ? `<span class="b"><button class="dv-ack" data-dvack="${esc(o.id)}">${ic('check', 'sm')}รับทราบ</button></span>` : `<span class="b"><em class="dv-wait">รอ Officer รับทราบ</em></span>`}</div>`).join('')}</div>` : '';
-    return `<div class="dv ${desk ? 'desk' : ''}">${ask}${ok}</div>`;
+  isDue(o) { return (o.status === 'today' || o.status === 'overdue') && (App.officer || !this.skipped().has(o.id)); },
+  supDue(rid, k, exp) { return !!exp && exp <= App.today && (App.officer || !this.skipped().has(rid + '|' + k)); },
+  late(exp) { const n = dayDiff(App.today, exp); return n > 0 ? `เลยกำหนด ${n} วัน` : 'ถึงวันส่งวันนี้'; },
+  who() { return (typeof PushUI !== 'undefined' && PushUI.who()) || String(localStorageGet('opsName') || '').trim().toUpperCase(); },
+  /** the question strip, attached under a row */
+  ask(yes, no, exp, desk) {
+    return `<div class="dv-q ${desk ? 'desk' : ''} ${dayDiff(App.today, exp) > 0 ? 'bad' : ''}"><span class="m">${ic('truck', 'sm')}<b>${this.late(exp)}</b> — รับของแล้วหรือยัง?</span>
+      <span class="b"><button class="dv-yes" ${yes}>${ic('check', 'sm')}รับแล้ว</button><button class="dv-no" ${no}>ยังไม่มา</button></span></div>`;
   },
-  find(id) { const d = this.d || {}; return (d.open_orders || []).find(o => o.id === id); },
+  trk() { return `<span class="dv-trk">${['สั่งแล้ว', 'รับคำสั่ง', 'รอจัดส่ง', 'จัดส่งสำเร็จ'].map((s, i) => `<i class="${i === 3 ? 'last' : ''}">${ic('check', 'sm')}</i><em>${s}</em>`).join('')}</span>`; },
+  ackBtn(attr) { return App.officer ? `<button class="dv-ack" ${attr}>${ic('check', 'sm')}รับทราบ</button>` : `<em class="dv-wait">รอ Officer รับทราบ</em>`; },
+  // ---------- phone rows ----------
+  mDone(o) {
+    return `<div class="mo-box mo-parcel dv-ok">${MOff.pic(o.material)}<span class="t"><b>${esc(o.material.name)}</b><small>${esc(o.id)} · รับครบ ${fmtN(o.ordered_qty)} ${esc(o.material.unit)}${o.rcv_by ? ' · โดย ' + esc(o.rcv_by) : ''}</small>
+      ${MOff.track(5, 'จัดส่งสำเร็จ · ' + fmtD(o.done_date))}</span><span class="v">${this.ackBtn(`data-dvack="${esc(o.id)}"`)}</span></div>`;
+  },
+  sDone(x) {
+    return `<div class="mo-sup dv-ok"><span class="mo-ci">${shopPic(x.art, 40)}</span><span class="t"><b>${esc(x.name)} ×${fmtQty(x.qty)} <small>${esc(x.unit)}</small></b><small>รับโดย ${esc(x.rcv_by || '-')} · ขอโดย ${esc(x.requester || '-')}</small>
+      ${MOff.track(5, 'จัดส่งสำเร็จ · ' + fmtD(String(x.rcv_at).slice(0, 10)))}</span>${this.ackBtn(`data-svack="${esc(x.rid)}|${x.k}"`)}</div>`;
+  },
+  // ---------- computer cards ----------
+  cards(kind) {
+    const d = this.d || {};
+    if (kind === 'mat') return (d.delivered || []).map((o, i) => Notif.card({ key: 'dlv:' + o.id, tone: 'done', icon: 'check', title: o.material.name,
+      titleHtml: `${esc(o.material.name)} · <span class="dv-okt">จัดส่งสำเร็จ</span>`, sub: `${o.id} · รับครบ ${fmtN(o.ordered_qty)} ${o.material.unit}${o.rcv_by ? ' · โดย ' + o.rcv_by : ''} · ${fmtD(o.done_date)}`,
+      track: this.trk(), due: `<div class="due-c ok"><b>${ic('check', 'sm')}</b><span>มาแล้ว</span></div>`, acts: App.officer ? [['รับทราบ', `data-dvack="${esc(o.id)}"`, 'primary']] : [['รอ Officer รับทราบ', 'disabled', 'plain']] }, i)).join('');
+    return (d.shop_delivered || []).map((x, i) => Notif.card({ key: 'sdlv:' + x.rid + ':' + x.k, tone: 'done', who: x.requester, title: x.name,
+      titleHtml: `${esc(x.name)} <span class="q">×${fmtQty(x.qty)}</span> · <span class="dv-okt">จัดส่งสำเร็จ</span>`, sub: `รับโดย ${x.rcv_by || '-'} · ${x.rid}`, pics: [x.art],
+      track: this.trk(), due: `<div class="due-c ok"><b>${ic('check', 'sm')}</b><span>มาแล้ว</span></div>`, acts: App.officer ? [['รับทราบ', `data-svack="${esc(x.rid)}|${x.k}"`, 'primary']] : [['รอ Officer รับทราบ', 'disabled', 'plain']] }, i)).join('');
+  },
+  supItem(rid, k) { const r = ((this.d || {}).shop_open || []).find(x => x.id === rid); if (!r) return null; const x = (r.items || [])[k]; return x ? { r, x, exp: x.exp === undefined ? r.expected_date : x.exp, st: x.st || r.status } : null; },
   refresh() { if (document.body.classList.contains('mo-on') && typeof MOff !== 'undefined') return MOff.refresh ? MOff.refresh() : MOff.render(); return App.refresh(); },
-  async click(e) {
-    const t = e.target.closest('[data-dvyes],[data-dvno],[data-dvack]'); if (!t) return false;
-    e.stopPropagation(); e.preventDefault();
-    if (t.dataset.dvack !== undefined) {
-      t.disabled = true;
-      try { const ids = t.dataset.dvack ? [t.dataset.dvack] : null; const r = await api('order_ack', ids); toast('รับทราบแล้ว', `${r.acked} รายการ · ออกจาก Timeline`); await App.bumpRev(); this.refresh(); } catch (er) { t.disabled = false; toastErr(er); }
-      return true;
-    }
-    const o = this.find(t.dataset.dvyes || t.dataset.dvno); if (!o) return true;
-    if (t.dataset.dvyes) {
-      if (document.body.classList.contains('mo-on') && typeof MOff !== 'undefined' && MOff.entry) MOff.entry(() => Mobile.receive(o.material.id, o.remaining_qty));
-      else { await App.go('delivery'); setTimeout(() => PAGES.delivery.receive(o), 350); }
-      return true;
-    }
-    if (!App.officer) { this.skip(o.id); toast('ซ่อนไว้ถึงพรุ่งนี้', o.material.name, 'info'); this.refresh(); return true; }
+  async newDate(name, ref, exp) {
     const nd = await modal({ title: 'ของยังไม่มา — เลื่อนวันส่ง', en: 'NEW DELIVERY DATE', icon: 'clock', color: 'var(--abn)', ok: 'บันทึกวันส่ง', okEn: 'Save',
-      body: `<p class="muted" style="margin:0 0 10px">${esc(o.material.name)} · ${esc(o.id)} · นัดเดิม ${fmtD(o.expected_date)}</p>
+      body: `<p class="muted" style="margin:0 0 10px">${esc(name)} · ${esc(ref)} · นัดเดิม ${fmtD(exp)}</p>
         <div class="dv-chips">${[[1, 'พรุ่งนี้'], [3, '+3 วัน'], [7, '+7 วัน']].map(([n, l]) => `<button type="button" class="chip" data-dvd="${addDays(App.today, n)}">${l}</button>`).join('')}<button type="button" class="chip" data-dvd="">ยังไม่รู้วัน</button></div>
         <input class="input" type="date" id="dv-date" value="${addDays(App.today, 1)}" min="${App.today}" style="margin-top:10px;width:100%">`,
       onOk: m => m.querySelector('#dv-date').dataset.none ? '' : (m.querySelector('#dv-date').value || '') });
-    if (nd === false) return true;
-    try { await api('order_set_date', o.id, nd === true ? '' : nd); toast(nd && nd !== true ? 'เลื่อนวันส่งแล้ว' : 'ย้อนเป็น รอกำหนดส่ง', `${o.material.name}${nd && nd !== true ? ' · ' + fmtD(nd) : ''}`); await App.bumpRev(); this.refresh(); } catch (er) { toastErr(er); }
-    return true;
+    return nd === false ? null : (nd === true ? '' : nd);
+  },
+  async click(e) {
+    const t = e.target.closest('[data-dvyes],[data-dvno],[data-dvack],[data-svyes],[data-svno],[data-svack]'); if (!t) return;
+    e.stopPropagation(); e.preventDefault();
+    const run = async (f, ok) => { t.disabled = true; try { await f(); if (ok) toast(...ok); await App.bumpRev(); this.refresh(); } catch (er) { t.disabled = false; toastErr(er); } };
+    if (t.dataset.dvack !== undefined) return run(() => api('order_ack', t.dataset.dvack ? [t.dataset.dvack] : null), ['รับทราบแล้ว', 'ออกจาก Timeline']);
+    if (t.dataset.svack !== undefined) return run(() => api('shop_item_ack', t.dataset.svack ? [t.dataset.svack] : null), ['รับทราบแล้ว', 'ออกจาก Timeline']);
+    if (t.dataset.svyes || t.dataset.svno) {
+      const [rid, k] = (t.dataset.svyes || t.dataset.svno).split('|'), it = this.supItem(rid, +k); if (!it) return;
+      if (t.dataset.svyes) {
+        let who = this.who();
+        if (!App.officer && !who) { who = await prompt2('ชื่อผู้รับของ', 'ใส่ชื่อเล่น / OPS'); if (!who) return; localStorageSet('opsName', who.toUpperCase()); }
+        return run(() => api('shop_item_received', rid, +k, who), ['บันทึกรับของแล้ว', `${it.x.name} · แจ้ง Officer แล้ว`]);
+      }
+      if (!App.officer) { this.skip(rid + '|' + k); toast('ซ่อนไว้ถึงพรุ่งนี้', it.x.name, 'info'); return this.refresh(); }
+      const nd = await this.newDate(it.x.name, rid, it.exp); if (nd === null) return;
+      return run(() => api('shop_request_date', rid, nd, +k), [nd ? 'เลื่อนวันส่งแล้ว' : 'ยังไม่รู้วันส่ง', it.x.name + (nd ? ' · ' + fmtD(nd) : '')]);
+    }
+    const o = ((this.d || {}).open_orders || []).find(x => x.id === (t.dataset.dvyes || t.dataset.dvno)); if (!o) return;
+    if (t.dataset.dvyes) {
+      if (document.body.classList.contains('mo-on') && typeof MOff !== 'undefined' && MOff.entry) return MOff.entry(() => Mobile.receive(o.material.id, o.remaining_qty));
+      await App.go('delivery'); return setTimeout(() => PAGES.delivery.receive(o), 350);
+    }
+    if (!App.officer) { this.skip(o.id); toast('ซ่อนไว้ถึงพรุ่งนี้', o.material.name, 'info'); return this.refresh(); }
+    const nd = await this.newDate(o.material.name, o.id, o.expected_date); if (nd === null) return;
+    return run(() => api('order_set_date', o.id, nd), [nd ? 'เลื่อนวันส่งแล้ว' : 'ย้อนเป็น รอกำหนดส่ง', o.material.name + (nd ? ' · ' + fmtD(nd) : '')]);
   },
 };
+/** a tiny name prompt (no browser dialogs) */
+async function prompt2(title, ph) {
+  const v = await modal({ title, en: 'NAME', icon: 'user', color: 'var(--primary)', ok: 'ตกลง', okEn: 'OK', body: `<input class="input" id="p2" placeholder="${esc(ph)}" style="width:100%">`, onOk: m => m.querySelector('#p2').value.trim() || false });
+  return typeof v === 'string' ? v : '';
+}
 document.addEventListener('click', e => {
   const c = e.target.closest && e.target.closest('[data-dvd]'); if (!c) return;
   const m = c.closest('.modal'), inp = m && m.querySelector('#dv-date'); if (!inp) return;
   if (c.dataset.dvd) { inp.value = c.dataset.dvd; delete inp.dataset.none; } else { inp.value = ''; inp.dataset.none = '1'; }
   m.querySelectorAll('[data-dvd]').forEach(b => b.classList.toggle('on', b === c));
 }, true);
-document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.dv')) Dlv.click(e); }, true);
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-dvyes],[data-dvno],[data-dvack],[data-svyes],[data-svno],[data-svack]')) Dlv.click(e); }, true);
 (() => {
-  // phone: at the top of the Material / อุปกรณ์ timelines on Home
-  if (typeof MOff !== 'undefined' && MOff.splitHtml) { const f = MOff.splitHtml; MOff.splitHtml = function (...a) { Dlv.d = this.d; return Dlv.html(this.d || {}) + f.apply(this, a); }; }
-  // computer: inside the Material lane, right under its header
-  if (typeof Notif !== 'undefined' && Notif.lane) {
-    const f = Notif.lane;
-    Notif.lane = function (t, ...a) {
-      const h = f.call(this, t, ...a); if (t !== 'mat') return h;
-      const d = (typeof Desk !== 'undefined' && Desk.d) || (App._dash && App._dash.data) || Dlv.d || {};
-      const x = Dlv.html(d, true), i = h.indexOf('</header>'); return x && i > 0 ? h.slice(0, i + 9) + x + h.slice(i + 9) : h;
+  const g = App.dash; if (g) App.dash = async function (...a) { const d = await g.apply(this, a); Dlv.d = d; return d; };
+  if (typeof MOff !== 'undefined') {
+    // Material rows: the question sits right under the parcel
+    const P = MOff.parcel;
+    MOff.parcel = function (o, e) { const h = P.call(this, o, e); return Dlv.isDue(o) ? `<div class="dv-in">${h}${Dlv.ask(`data-dvyes="${esc(o.id)}"`, `data-dvno="${esc(o.id)}"`, o.expected_date)}</div>` : h; };
+    // the two timelines on Home, with “จัดส่งสำเร็จ” rows on top and the question inside supply rows
+    MOff.splitHtml = function (t, e) {
+      Dlv.d = this.d;
+      const s = this._spend || null, money = (c, v) => s ? `<span class="mo-money ${c}">เดือนนี้ <b>${this.money(v)}</b></span>` : '';
+      const N = { saved: 1, acknowledged: 2, ordered: 3 }, L = { saved: 'รอ Officer รับคำสั่ง', acknowledged: 'รับคำสั่งแล้ว · รอสั่งของ', ordered: 'สั่งของแล้ว · กำลังส่ง' },
+        X = { saved: ['acknowledged', 'รับคำสั่ง', 'b'], acknowledged: ['ordered', 'สั่งของแล้ว', 'o'], ordered: ['delivered', 'ของมาแล้ว', 'g'] };
+      const o = e.filter(d => d.st !== 'delivered'), op = this.op, dm = (this.d && this.d.delivered) || [], ds = (this.d && this.d.shop_delivered) || [];
+      const sup = d => {
+        const due = d.st === 'ordered' && Dlv.supDue(d.r.id, d.k, d.exp);
+        return `<div class="mo-sup ${due ? 'dv-in' : ''}"><button class="mo-ci" data-item="${esc(d.r.id)}|${d.k}">${shopPic(d.x.art, 40)}</button>
+          <button class="t" data-item="${esc(d.r.id)}|${d.k}"><b>${esc(d.x.name)} ×${fmtQty(d.x.qty)} <small>${esc(d.x.unit || '')}</small></b><small>ขอโดย ${esc(d.r.requester)}</small>${this.track(N[d.st] || 1, d.st === 'ordered' && d.exp ? 'กำลังส่ง · ' + fmtD(d.exp) : L[d.st] || '', due && d.exp < App.today)}</button>
+          ${due ? '' : op ? `<span class="nx mu">${d.st === 'saved' ? 'รอ Officer' : d.st === 'acknowledged' ? 'รอสั่งของ' : 'กำลังมา'}</span>` : X[d.st] ? `<button class="nx ${X[d.st][2]}" data-next="${esc(d.r.id)}|${d.k}|${X[d.st][0]}">${X[d.st][1]}</button>` : ''}
+          ${due ? Dlv.ask(`data-svyes="${esc(d.r.id)}|${d.k}"`, `data-svno="${esc(d.r.id)}|${d.k}"`, d.exp) : ''}</div>`;
+      };
+      return `<div class="mo-h3"><b>${ic('drum', 'sm')} Material · กำลังมา</b>${money('m', s && s.material.amount)}<a data-tab="orders" data-seg="wait">ทั้งหมด ${t.length}</a></div>
+      ${dm.map(x => Dlv.mDone(x)).join('')}
+      ${t.length ? t.slice(0, 3).map(d => this.parcel(d)).join('') : dm.length ? '' : '<div class="mo-box mo-empty sm"><div><b>ไม่มีใบสั่งซื้อค้าง</b></div></div>'}
+      <div class="mo-h3"><b>${ic('bag', 'sm')} อุปกรณ์ · ${op ? 'คำขอของฉัน' : 'คำขอที่ค้าง'}</b>${money('s', s && s.supply.amount)}<a data-tab="shop">ทั้งหมด ${o.length}</a></div>
+      ${o.length || ds.length ? `<div class="mo-box mo-sups">${ds.map(x => Dlv.sDone(x)).join('')}${o.slice(0, 3).map(sup).join('')}</div>` : `<div class="mo-box mo-empty sm"><div><b>${op ? 'ไม่มีคำขออุปกรณ์ของคุณที่ค้าง' : 'ไม่มีคำขออุปกรณ์ค้าง'}</b></div></div>`}`;
     };
   }
-  // keep the dashboard data for the computer lanes
-  const g = App.dash; if (g) App.dash = async function (...a) { const d = await g.apply(this, a); Dlv.d = d; return d; };
+  if (typeof Notif !== 'undefined') {
+    // computer: the question inside each due card
+    const C = Notif.card;
+    Notif.card = function (t, i) {
+      let h = C.call(this, t, i), q = '';
+      const m = /^(ovd|today):(.+)$/.exec(t.key || '');
+      if (m) { const o = ((Dlv.d || {}).open_orders || []).find(x => x.id === m[2]); if (o && Dlv.isDue(o)) q = Dlv.ask(`data-dvyes="${esc(o.id)}"`, `data-dvno="${esc(o.id)}"`, o.expected_date, true); }
+      const s = /^sr:([^:]+):ordered(?::(\d+))?$/.exec(t.key || '');
+      if (s) { const k = +(s[2] || 0), it = Dlv.supItem(s[1], k); if (it && it.st === 'ordered' && Dlv.supDue(s[1], k, it.exp)) q = Dlv.ask(`data-svyes="${esc(s[1])}|${k}"`, `data-svno="${esc(s[1])}|${k}"`, it.exp, true); }
+      return q ? h.replace('<div class="nc-a">', q + '<div class="nc-a">').replace('<article class="nrow', '<article class="nrow dv-due') : h;
+    };
+    // “จัดส่งสำเร็จ” cards at the top of each lane until the Officer acknowledges
+    const Ln = Notif.lane;
+    Notif.lane = function (t, ...a) {
+      const h = Ln.call(this, t, ...a), x = Dlv.cards(t === 'mat' ? 'mat' : 'shop'); if (!x) return h;
+      const i = h.indexOf('<div class="nl-list'); if (i > 0) { const j = h.indexOf('>', i) + 1; return h.slice(0, j) + x + h.slice(j); }
+      const e = h.indexOf('<div class="nl-empty'); return e > 0 ? h.slice(0, e) + `<div class="nl-list">${x}</div>` + h.slice(e) : h;
+    };
+  }
 })();
 
