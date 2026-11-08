@@ -95,3 +95,12 @@
 .ib-ackall span{display:flex;align-items:center;gap:6px;font-size:13px}.ib-ackall span svg{width:16px;height:16px;color:#178A3E}
 .dv-bulk{background:#E6F4EA!important}
 
+/* ===== patch 006-op-supply-ask.css ===== */
+/* v3.67 · question inside the อุปกรณ์-tab card */
+.mo-ch.dv-in{flex-wrap:wrap}
+.mo-ch.dv-in>.mo-ci,.mo-ch.dv-in>.t{align-self:stretch}
+.mo-ch.dv-in>.t{flex:1 1 0;min-width:0}
+.mo-ch.dv-in .dv-q{flex:0 0 100%;border:0;border-top:1.5px dashed rgba(0,0,0,.18);border-radius:0;margin:0}
+.mo-ch.late{border-color:#D93A40!important}
+.mo-ch .st.r b{color:#D93A40}
+
