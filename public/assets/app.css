@@ -157,6 +157,30 @@
 .rh-r .t{flex:1;min-width:0;display:flex;flex-direction:column}.rh-r .t b{font-size:13.5px;font-weight:800;line-height:1.3}.rh-r .t b small{font-weight:600;color:#8C8C8C}.rh-r .t>small{font-size:11.5px;color:#4A4A4A;line-height:1.35}
 .rh-r .q{font-size:15px;font-weight:800;color:#178A3E;white-space:nowrap;flex:none}.rh-r .q.g{color:#2F6FE0}.rh-r .q small{font-size:10.5px;font-weight:700;margin-left:2px;color:#4A4A4A}
 @media (max-width:1200px){.dk-lanes.two,.rh-cols{grid-template-columns:1fr!important}}
+/* v3.72 · tighter right column, timelines up in the left column */
+.dk-grid{grid-template-columns:minmax(0,1fr) 330px!important;gap:16px!important}
+.dk-l{gap:12px!important}
+.dk-r{gap:12px!important}
+.dk-r .dk-box{padding:10px 12px}
+.dk-r .dk-ah b{font-size:15.5px}.dk-r .dk-ah .ic{width:34px;height:34px}
+.dk-r .dk-a{gap:8px;padding:7px 0}.dk-r .dk-a .mo-pic{width:38px;height:38px}
+.dk-r .dk-a .tx>b{font-size:12.5px}.dk-r .dk-a .r>b{font-size:15px}
+.dk-r .dk-sp{padding:12px 14px!important}
+.dk-r .dk-sp .sp-big,.dk-r .dk-sp .sp-total{font-size:30px!important}
+.dk-r .dk-sp .sp-split{gap:8px!important}
+.dk-r .dk-feed .h-r{padding:6px 4px}.dk-r .dk-feed .h-r .tx b{font-size:12.5px}.dk-r .dk-feed .h-r .tx small{font-size:11px}
+.dk-tls{gap:8px}
+.dk-tls-h b{font-size:17px}
+.dk-lanes.two{gap:12px!important}
+.dk-lanes.two .nlane{padding:10px 10px 8px!important}
+.dk-lanes.two .nl-h{gap:8px}
+.dk-lanes.two .nrow{padding:10px 10px 10px 12px!important;gap:8px 10px!important}
+.dk-lanes.two .nr-due{min-width:0;text-align:right}
+.dk-lanes.two .dv-q.desk{padding:6px 6px 6px 10px;gap:6px 8px}
+.dk-lanes.two .dv-q.desk .m{flex:1 1 100%;font-size:12.5px}
+.dk-lanes.two .dv-q.desk .b{flex:1;display:flex;gap:6px}.dk-lanes.two .dv-q.desk .b button{flex:1;height:32px}
+.dk-hist{margin-top:2px}
+@media (max-width:1500px){.dk-grid{grid-template-columns:minmax(0,1fr) 300px!important}.dk-lanes.two{grid-template-columns:1fr!important}}
 
 /* ===== patch 009-instant-feedback.css ===== */
 /* v3.71 · instant feedback */
