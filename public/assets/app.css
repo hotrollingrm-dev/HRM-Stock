@@ -158,3 +158,16 @@
 .rh-r .q{font-size:15px;font-weight:800;color:#178A3E;white-space:nowrap;flex:none}.rh-r .q.g{color:#2F6FE0}.rh-r .q small{font-size:10.5px;font-weight:700;margin-left:2px;color:#4A4A4A}
 @media (max-width:1200px){.dk-lanes.two,.rh-cols{grid-template-columns:1fr!important}}
 
+/* ===== patch 009-instant-feedback.css ===== */
+/* v3.71 · instant feedback */
+.dv-q button.busy,.dv-ok button.busy,.ib-ack button.busy,.ib-ackall button.busy,.nrow button.busy{position:relative;color:transparent!important;pointer-events:none}
+.dv-q button.busy svg,.dv-ok button.busy svg,.ib-ack button.busy svg{opacity:0}
+.dv-q button.busy::after,.dv-ok button.busy::after,.ib-ack button.busy::after,.ib-ackall button.busy::after,.nrow button.busy::after{content:"";position:absolute;inset:0;margin:auto;width:18px;height:18px;border-radius:50%;border:2.5px solid currentColor;border-color:#fff #fff #fff transparent;animation:dvSpin .7s linear infinite}
+.dv-no.busy::after{border-color:#141414 #141414 #141414 transparent!important}
+.dv-ack.busy::after,.ib-ack button.busy::after,.ib-ackall button.busy::after{border-color:#FFC21A #FFC21A #FFC21A transparent!important}
+@keyframes dvSpin{to{transform:rotate(360deg)}}
+body.dv-busy .dv-q button:not(.busy),body.dv-busy .dv-ok button:not(.busy),body.dv-busy .ib-ack button:not(.busy){pointer-events:none;opacity:.45;transition:opacity .15s}
+.dvp.saving .dvp-card{padding:26px 20px 20px}
+.dvp-spin{width:56px;height:56px;margin-bottom:8px;border-radius:50%;border:5px solid #E4E1D8;border-top-color:#178A3E;animation:dvSpin .8s linear infinite}
+.dvp.saving .dvp-s{color:#8C8C8C}
+
