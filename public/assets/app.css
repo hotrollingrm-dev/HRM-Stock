@@ -83,3 +83,15 @@
 .nrow.t-done{background:#F1FAF3}
 .dv-chips{display:flex;gap:6px;flex-wrap:wrap}.dv-chips .chip.on{background:#141414;color:#FFC21A}
 
+/* ===== patch 005-ack-in-bell.css ===== */
+/* v3.66 · รับทราบ inside the phone bell */
+.ib-row.has-ack{border-bottom-left-radius:0!important;border-bottom-right-radius:0!important;margin-bottom:0!important}
+.ib-ack{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:6px 8px 8px 12px;margin:0 0 8px;background:#F1FAF3;border:1.5px solid #141414;border-top:1px dashed rgba(0,0,0,.2);border-radius:0 0 12px 12px;animation:tbIn .4s cubic-bezier(.32,.72,0,1) both}
+.ib-ack span{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:800;color:#178A3E}.ib-ack span svg{width:14px;height:14px}
+.ib-ack span.done{color:#8C8C8C}
+.ib-ack button,.ib-ackall button{height:34px;padding:0 14px;border-radius:999px;border:1.5px solid #141414;background:#141414;color:#FFC21A;font:inherit;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.ib-ack button svg{width:13px;height:13px}
+.ib-ackall{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:8px 8px 8px 12px;border:1.5px solid #141414;border-radius:12px;background:#E6F4EA}
+.ib-ackall span{display:flex;align-items:center;gap:6px;font-size:13px}.ib-ackall span svg{width:16px;height:16px;color:#178A3E}
+.dv-bulk{background:#E6F4EA!important}
+
