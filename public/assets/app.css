@@ -195,3 +195,49 @@ body.dv-busy .dv-q button:not(.busy),body.dv-busy .dv-ok button:not(.busy),body.
 .dvp-spin{width:56px;height:56px;margin-bottom:8px;border-radius:50%;border:5px solid #E4E1D8;border-top-color:#178A3E;animation:dvSpin .8s linear infinite}
 .dvp.saving .dvp-s{color:#8C8C8C}
 
+/* ===== patch 010-officer-ack-popup.css ===== */
+/* v3.73 · Officer “ของมาแล้ว รอรับทราบ” popup + to-do item */
+.ap{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;padding:20px;background:rgba(20,20,20,.42);animation:dvpBg .25s ease both}
+.ap.out{animation:dvpBg .25s ease reverse both}.ap.out .ap-card{animation:dvpIn .25s ease reverse both}
+.ap-card{width:min(560px,100%);max-height:min(86vh,760px);display:flex;flex-direction:column;background:#fff;border:1.5px solid #141414;border-radius:22px;box-shadow:0 8px 0 rgba(0,0,0,.18);overflow:hidden;animation:dvpIn .5s cubic-bezier(.32,.72,0,1) both}
+.ap-hero{position:relative;display:flex;align-items:center;gap:14px;padding:18px 18px 16px 112px;min-height:96px;background:#FFC21A;border-bottom:1.5px solid #141414}
+.ap-hero img{position:absolute;object-fit:contain;pointer-events:none}
+.ap-hero .e1{left:16px;top:14px;width:70px;height:70px;animation:apBob 2.8s ease-in-out infinite}
+.ap-hero .e2{left:66px;top:6px;width:34px;height:34px;transform:rotate(14deg);animation:apPop .6s .3s cubic-bezier(.32,.72,0,1) both}
+.ap-hero .e3{right:14px;bottom:8px;width:38px;height:38px;opacity:.9;animation:apDrive 3.5s ease-in-out infinite}
+@keyframes apBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-5px) rotate(3deg)}}
+@keyframes apPop{from{transform:scale(0) rotate(-30deg);opacity:0}}
+@keyframes apDrive{0%,100%{transform:translateX(0)}50%{transform:translateX(-6px)}}
+.ap-hero b{display:block;font-size:20px;font-weight:800;line-height:1.25;color:#141414}.ap-hero small{display:block;font-size:13px;font-weight:700;color:#5a4a10}
+.ap-list{overflow:auto;padding:6px 14px;flex:1}
+.ap-r{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #F1EFE8;animation:tbIn .4s cubic-bezier(.32,.72,0,1) both;animation-delay:calc(var(--i) * 60ms);transition:opacity .3s,transform .3s}
+.ap-r:first-child{border-top:0}
+.ap-r.gone{opacity:0;transform:translateX(30px)}
+.ap-r .mo-pic,.ap-sp{width:44px;height:44px;flex:none;border-radius:10px;border:1.5px solid #141414;display:grid;place-items:center;overflow:hidden;background:#FFF8E1}
+.ap-sp img,.ap-sp svg{width:86%;height:86%;object-fit:contain}
+.ap-r .t{flex:1;min-width:0;display:flex;flex-direction:column}.ap-r .t b{font-size:14.5px;font-weight:800;line-height:1.3}.ap-r .t small{font-size:12px;color:#4A4A4A;line-height:1.35}
+.ap-r .tag{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap;flex:none}.ap-r .tag.m{background:#FFF3CC;color:#8a5a00}.ap-r .tag.s{background:#E6EEFC;color:#2F6FE0}
+.ap-one,.ap-all,.ap-skip{height:38px;padding:0 14px;border-radius:999px;border:1.5px solid #141414;font:inherit;font-size:13.5px;font-weight:800;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;transition:transform .3s cubic-bezier(.32,.72,0,1)}
+.ap-one:active,.ap-all:active,.ap-skip:active{transform:scale(.96)}
+.ap-one svg,.ap-all svg{width:14px;height:14px}
+.ap-one{background:#141414;color:#FFC21A;flex:none}
+.ap-f{display:flex;gap:10px;padding:12px 14px 6px;border-top:1.5px solid #141414}
+.ap-skip{flex:1;background:#fff;color:#141414}.ap-all{flex:1.6;background:#178A3E;color:#fff}
+.ap-note{display:block;text-align:center;font-size:11.5px;color:#8C8C8C;padding:0 14px 12px}
+.ap-one.busy,.ap-all.busy{color:transparent!important;position:relative;pointer-events:none}.ap-one.busy svg,.ap-all.busy svg{opacity:0}
+.ap-one.busy::after,.ap-all.busy::after{content:"";position:absolute;inset:0;margin:auto;width:18px;height:18px;border-radius:50%;border:2.5px solid #FFC21A;border-left-color:transparent;animation:dvSpin .7s linear infinite}
+.ap-all.busy::after{border-color:#fff #fff #fff transparent}
+.ap-done{display:flex;flex-direction:column;align-items:center;gap:4px;padding:28px 20px 20px;text-align:center}
+.ap-done .e4{width:84px;height:84px;object-fit:contain;animation:apPop .6s cubic-bezier(.32,.72,0,1) both}
+.ap-done b{font-size:20px;font-weight:800}.ap-done small{font-size:13px;color:#4A4A4A;margin-bottom:10px}.ap-done .ap-all{width:100%}
+/* to-do: computer strip item + phone card */
+.ap-t .ic{background:#E6F4EA!important;overflow:hidden}.ap-t .ic .ap-ti{width:26px;height:26px;object-fit:contain}
+.ap-mt{display:flex!important;align-items:center;gap:10px;width:100%;margin:0 0 12px;padding:10px 12px!important;background:#E6F4EA!important;font:inherit;text-align:left;color:#141414;cursor:pointer;animation:tbIn .45s cubic-bezier(.32,.72,0,1) both}
+.ap-mt .ap-ti{width:38px;height:38px;object-fit:contain;flex:none;animation:apBob 2.8s ease-in-out infinite}
+.ap-mt .t{flex:1;min-width:0;display:flex;flex-direction:column}.ap-mt .t b{font-size:14.5px;font-weight:800}.ap-mt .t small{font-size:12px;color:#4A4A4A}
+.ap-mt .n{min-width:28px;height:28px;border-radius:999px;background:#178A3E;color:#fff;font-weight:800;display:grid;place-items:center;flex:none}
+@media (max-width:520px){.ap{padding:12px;align-items:end}.ap-card{border-radius:22px 22px 18px 18px}.ap-hero{padding-left:100px}.ap-hero b{font-size:18px}.ap-r .tag{display:none}}
+/* the extra to-do item: let the strip flow instead of forcing 5 fixed columns */
+.dk-todo:not(.all) .dk-tl,.dk-todo:not(.all) .dk-tl:has(.more){grid-template-columns:repeat(auto-fit,minmax(210px,1fr))!important}
+.ap-t button{white-space:nowrap}
+
