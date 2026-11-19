@@ -241,3 +241,19 @@ body.dv-busy .dv-q button:not(.busy),body.dv-busy .dv-ok button:not(.busy),body.
 .dk-todo:not(.all) .dk-tl,.dk-todo:not(.all) .dk-tl:has(.more){grid-template-columns:repeat(auto-fit,minmax(210px,1fr))!important}
 .ap-t button{white-space:nowrap}
 
+/* ===== patch 011-snappy.css ===== */
+/* v3.74 · instant press + busy button + network bar */
+button,.btn,[data-go],.chip{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button:not(:disabled):active,.btn:not(:disabled):active,[data-go]:active{transform:scale(.97);transition:transform 60ms ease-out!important}
+.is-busy{position:relative;pointer-events:none;cursor:progress}
+.is-busy>*{opacity:.35}
+.is-busy::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:snSpin .6s linear infinite}
+@keyframes snSpin{to{transform:rotate(360deg)}}
+html.net-wait,html.net-wait *{cursor:progress}
+html.net-wait input,html.net-wait textarea{cursor:text}
+#net-bar{position:fixed;left:0;top:0;height:3px;width:0;z-index:9999;background:#141414;pointer-events:none;opacity:0}
+#net-bar.on{opacity:1;width:82%;transition:width 4s cubic-bezier(.1,.7,.2,1),opacity .1s}
+#net-bar.done{opacity:0;width:100%;transition:width .2s ease-out,opacity .3s .15s}
+#net-bar::after{content:"";position:absolute;right:0;top:0;bottom:0;width:60px;background:#FFC21A}
+@media (prefers-reduced-motion:reduce){.is-busy::after{animation-duration:1.5s}}
+
