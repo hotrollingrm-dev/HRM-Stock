@@ -4,7 +4,8 @@
   "outputDirectory": "public",
   "functions": {
     "api/[name].js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "server/**"
     },
     "api/export.py": {
       "maxDuration": 60,
@@ -55,6 +56,12 @@
           "value": "application/manifest+json"
         }
       ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/_sb?job=tick",
+      "schedule": "0 18 * * *"
     }
   ]
 }

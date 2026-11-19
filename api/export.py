@@ -41,7 +41,19 @@ def _signed_in(cookie_header):
 
 def _gas(name, args, ctx, origin):
     url, key = os.environ.get("GAS_URL", ""), os.environ.get("GAS_KEY", "")
-    if not url or not key:
+    if not key:
+        raise RuntimeError("ยังไม่ได้ตั้ง GAS_KEY ใน Vercel")
+    if os.environ.get("SUPABASE_DB_URL") and origin:
+        # v3.76 · ask our own API (it knows whether Google or Supabase holds the data right now)
+        body = json.dumps({"args": args, "ctx": ctx or {}}).encode()
+        req = urllib.request.Request(origin.rstrip("/") + "/api/" + name, data=body, method="POST",
+                                     headers={"Content-Type": "application/json", "x-hrm-internal": key})
+        with urllib.request.urlopen(req, timeout=50) as r:
+            res = json.loads(r.read().decode("utf-8"))
+        if not res.get("ok"):
+            raise RuntimeError(res.get("error") or "อ่านข้อมูลไม่สำเร็จ")
+        return res["data"]
+    if not url:
         raise RuntimeError("ยังไม่ได้ตั้ง GAS_URL / GAS_KEY ใน Vercel")
     body = json.dumps({"hrm": "api", "key": key, "name": name, "args": args, "ctx": ctx or {}, "origin": origin}).encode()
     req = urllib.request.Request(url, data=body, headers={"Content-Type": "text/plain;charset=utf-8"}, method="POST")

@@ -271,3 +271,23 @@ html.net-wait input,html.net-wait textarea{cursor:text}
   #header .ptitle .bi .th{white-space:nowrap}
 }
 
+/* ===== patch 013-supabase-move.css ===== */
+/* v3.76 · Settings › database move card */
+.sb-card .sb-lead{margin:2px 0 14px;color:var(--text-2,#4A4A4A);font-size:14px;line-height:1.55;max-width:760px}
+.sb-steps{list-style:none;margin:0 0 14px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.sb-steps li{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1.5px solid var(--line,#E4E0D6);border-radius:14px;background:var(--surface,#fff)}
+.sb-steps i{font-style:normal;flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#141414;color:#FFC21A;font-weight:800;font-size:13px}
+.sb-steps b{display:block;font-size:13.5px;line-height:1.4}.sb-steps span{display:block;font-size:12px;color:var(--text-3,#777);margin-top:3px;line-height:1.45}
+.sb-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:12px}
+.sb-stats>div{padding:10px 12px;border-radius:12px;background:var(--surface-2,#F6F3EC)}
+.sb-stats span{display:block;font-size:12px;color:var(--text-3,#777)}.sb-stats em{font-style:normal;font-size:10px;letter-spacing:.06em;margin-left:6px;opacity:.7}
+.sb-stats b{display:block;font-size:14.5px;margin-top:2px;font-variant-numeric:tabular-nums}.sb-stats b.ok{color:#178A3E}.sb-stats b.warn{color:#E8630F}
+.sb-verify{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;margin-bottom:12px}
+.sb-verify.ok{background:#F1FAF3;color:#14532D}.sb-verify.bad{background:#FDECEC;color:#8A1C22}
+.sb-verify b{display:block;font-size:14px}.sb-verify span{display:block;font-size:12.5px;opacity:.85;margin-top:2px}
+.sb-note{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.5;padding:8px 12px;border-radius:12px;background:var(--surface-2,#F6F3EC);margin-bottom:8px}
+.sb-note.warn{background:#FFF3CC}.sb-note code{font-size:12px;background:rgba(0,0,0,.06);padding:1px 6px;border-radius:6px;word-break:break-all}
+.sb-note .link{background:none;border:0;color:#2F6FE0;font:inherit;font-weight:700;cursor:pointer;padding:0 4px}
+.sb-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}.sb-acts .grow{flex:1}
+.sb-back{color:#D93A40!important}
+
