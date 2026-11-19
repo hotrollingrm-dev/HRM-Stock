@@ -257,3 +257,17 @@ html.net-wait input,html.net-wait textarea{cursor:text}
 #net-bar::after{content:"";position:absolute;right:0;top:0;bottom:0;width:60px;background:#FFC21A}
 @media (prefers-reduced-motion:reduce){.is-busy::after{animation-duration:1.5s}}
 
+/* ===== patch 012-fast-pages.css ===== */
+/* v3.75 · 1366-px screens: the page column never grows wider than the window (was pushing Stock entry / Shop sideways) */
+.main{grid-template-columns:minmax(0,1fr)}
+.main>*{min-width:0}
+.ledger{overflow-x:auto}
+/* header on 1366–1500 px: keep every button on screen — the Google pill keeps its dot, the role card keeps icon + switch */
+@media (max-width:1500px){
+  #header{gap:8px}
+  #header .hpill{padding-left:12px;padding-right:12px}
+  #header .hpill .bi{display:none}
+  #header .dk-role .tx{display:none}
+  #header .ptitle .bi .th{white-space:nowrap}
+}
+
