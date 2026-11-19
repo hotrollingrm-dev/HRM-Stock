@@ -290,4 +290,8 @@ html.net-wait input,html.net-wait textarea{cursor:text}
 .sb-note .link{background:none;border:0;color:#2F6FE0;font:inherit;font-weight:700;cursor:pointer;padding:0 4px}
 .sb-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}.sb-acts .grow{flex:1}
 .sb-back{color:#D93A40!important}
+.sb-diff{display:grid;gap:6px;margin-top:8px}
+.sb-diff>div{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:12px;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.7)}
+.sb-diff b{font-size:12.5px}.sb-diff code{font-size:11.5px;background:rgba(0,0,0,.06);padding:1px 5px;border-radius:5px;word-break:break-all}
+.sb-diff em{font-style:normal;opacity:.7}
 

@@ -192,9 +192,28 @@ async function verify(req, ctx) {
   for (let i = 0; i < L.length; i++) {
     const s = norm(await SB().call(L[i][0], L[i].slice(1), ctx, originOf(req), gasCaller(req)));
     if (s === g[i]) out.same.push(L[i][0]);
-    else { let at = 0; while (at < s.length && s[at] === g[i][at]) at++; out.diff.push({ name: L[i][0], google: g[i].slice(Math.max(0, at - 60), at + 80), supabase: s.slice(Math.max(0, at - 60), at + 80) }); }
+    else { const d = firstDiff(safeParse(g[i]), safeParse(s)); out.diff.push(Object.assign({ name: L[i][0] }, d)); }
   }
   return out;
+}
+const safeParse = t => { try { return JSON.parse(t); } catch (e) { return t; } };
+/** where two answers first differ → {path, google, supabase, count} (values cut short) */
+function firstDiff(a, b) {
+  let first = null, count = 0;
+  const show = v => { const t = v === undefined ? 'undefined' : JSON.stringify(v); return t.length > 120 ? t.slice(0, 117) + '…' : t; };
+  (function walk(x, y, path) {
+    if (count > 200) return;
+    if (x === y) return;
+    const ox = x && typeof x === 'object', oy = y && typeof y === 'object';
+    if (ox && oy && Array.isArray(x) === Array.isArray(y)) {
+      const keys = new Set([...Object.keys(x), ...Object.keys(y)]);
+      if (Array.isArray(x) && x.length !== y.length) { count++; if (!first) first = { path: path + '.length', google: show(x.length), supabase: show(y.length) }; }
+      for (const k of keys) walk(x[k], y[k], path + (Array.isArray(x) ? '[' + k + ']' : '.' + k));
+      return;
+    }
+    count++; if (!first) first = { path, google: show(x), supabase: show(y) };
+  })(a, b, '');
+  return Object.assign(first || { path: '?', google: '', supabase: '' }, { count });
 }
 /** scans saved on Supabase (team cookie) */
 async function sbFile(req, res) {
