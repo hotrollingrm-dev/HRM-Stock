@@ -63,5 +63,8 @@
       "path": "/api/_sb?job=tick",
       "schedule": "0 18 * * *"
     }
+  ],
+  "regions": [
+    "sin1"
   ]
 }
