@@ -1,4 +1,4 @@
-const HRM_BUILD={v:"3.78.0",d:"2026-11-23"},$=(t,e=document)=>e.querySelector(t),$$=(t,e=document)=>[...e.querySelectorAll(t)],esc=t=>String(t??"").replace(/[&<>"']/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[e]),Perf={mode(){return localStorageGet("perf")||"auto"},lite(){return document.documentElement.classList.contains("lite")},init(){const t=this.mode(),e=navigator.hardwareConcurrency||8,s=navigator.deviceMemory||8;let a=t==="lite";t==="auto"&&(a=localStorageGet("perfAuto")==="lite"||e<=4||s<=4||matchMedia("(prefers-reduced-motion: reduce)").matches||this.softGpu()),document.documentElement.classList.toggle("lite",!!a),t==="auto"&&!a&&setTimeout(()=>this.probe(),3e3)},softGpu(){try{const t=document.createElement("canvas").getContext("webgl");if(!t)return!0;const e=t.getExtension("WEBGL_debug_renderer_info"),s=e?String(t.getParameter(e.UNMASKED_RENDERER_WEBGL)):"";return/swiftshader|llvmpipe|softpipe|basic render|software/i.test(s)}catch{return!1}},probe(){let t=0;const e=performance.now(),s=()=>{t++;const a=performance.now()-e;if(a<1500)return requestAnimationFrame(s);a/t>28&&(localStorageSet("perfAuto","lite"),document.documentElement.classList.add("lite"),typeof toast=="function"&&toast("เปิดโหมดลื่นอัตโนมัติ","เครื่องนี้ทำงานช้า — ปิดเอฟเฟกต์กระจกให้แล้ว · เปลี่ยนได้ที่ ตั้งค่า","info"))};requestAnimationFrame(s)},set(t){localStorageSet("perf",t),t!=="auto"&&localStorageSet("perfAuto",""),this.init()}};Perf.init();function debounce(t,e=140){let s;return function(...a){clearTimeout(s),s=setTimeout(()=>t.apply(this,a),e)}}const Outbox={K:"outbox",busy:null,all(){try{return JSON.parse(localStorageGet(this.K)||"[]")}catch{return[]}},save(t){localStorageSet(this.K,JSON.stringify(t)),this.paint()},pending(t){return this.all().find(e=>e.name==="day_save"&&e.args[0]===t&&!e.error)},add(t,e,s){const a=this.all().filter(n=>!(n.name===t&&n.args[0]===e[0]));return a.push({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),name:t,args:e,label:s||"",at:Date.now()}),this.save(a),this.flush(),a.length},flush(){return this.busy?this.busy:(this.busy=(async()=>{let t=!1;for(;;){const e=this.all(),s=e.find(a=>!a.error);if(!s)break;try{await api(s.name,...s.args),t=!0,this.save(this.all().filter(a=>a.id!==s.id))}catch(a){if(a.network)break;this.save(this.all().map(n=>n.id===s.id?Object.assign({},n,{error:a.message}):n)),toast("ส่งข้อมูลไม่สำเร็จ",`${esc(s.label)} — ${esc(a.message)}`,"err")}}if(t){toast("ส่งข้อมูลแล้ว ✓","บันทึกขึ้นระบบเรียบร้อย","info");try{await App.bumpRev()}catch{}}return this.busy=null,!this.all().some(e=>!e.error)})(),this.busy)},paint(){const t=this.all(),e=t.length,s=t.some(a=>a.error);document.querySelectorAll("[data-outbox]").forEach(a=>{a.classList.toggle("hidden",!e),a.classList.toggle("bad",s);const n=a.querySelector("b");n&&(n.textContent=e)})},chip(){return`<button class="ob-chip hidden" data-outbox title="ข้อมูลที่บันทึกไว้ในเครื่อง รอส่งขึ้นระบบ — กดเพื่อส่งตอนนี้">${ic("upload","sm")}รอส่ง <b>0</b></button>`},init(){window.addEventListener("online",()=>this.flush()),setInterval(()=>{this.all().some(t=>!t.error)&&!document.hidden&&this.flush()},2e4),document.addEventListener("click",t=>{if(!t.target.closest("[data-outbox]"))return;const s=this.all().filter(a=>a.error);s.length&&(toast("รายการที่ส่งไม่ผ่าน",s.map(a=>esc(a.label)+": "+esc(a.error)).join("<br>")+"<br>แก้ไขแล้วบันทึกใหม่ — รายการนี้ถูกลบออกจากคิว","err"),this.save(this.all().filter(a=>!a.error))),this.flush()}),this.all().length&&setTimeout(()=>this.flush(),1500)}},Warm={on(){return IS_GAS},key(t){return"warm."+t+"."+(localStorageGet("token")?"o":"p")},get(t){if(!this.on())return null;try{const e=JSON.parse(localStorageGet(this.key(t))||"null");return e&&Date.now()-e.at<7*864e5?e.d:null}catch{return null}},set(t,e){if(!(!this.on()||!e))try{localStorageSet(this.key(t),JSON.stringify({at:Date.now(),d:e}))}catch{}}},IS_WEB=!!window.HRM_WEB,IS_GAS=IS_WEB||!!(window.google&&window.google.script&&window.google.script.run),SRC_LABEL=IS_GAS?"Google Sheets":"ไดร์ฟกลาง",bridgeReady=new Promise(t=>{if(IS_GAS||window.pywebview?.api)return t(!0);let e=!1;window.addEventListener("pywebviewready",()=>{e=!0,t(!0)}),setTimeout(async()=>{if(e||window.pywebview?.api)return t(!0);try{const s=await fetch("/api/get_rev",{method:"POST",body:"[]"});s.ok&&(s.headers.get("content-type")||"").includes("json")&&t(!0)}catch{}},250)});function gasCtx(){return{token:localStorageGet("token")||"",machine:localStorageGet("machine")||"",name:localStorageGet("officerName")||"",today_override:window.HRM_TODAY||""}}function gasCall(t,e){return IS_WEB?fetch("/api/"+encodeURIComponent(t),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({args:e,ctx:gasCtx()})}).then(s=>s.text()):new Promise((s,a)=>google.script.run.withSuccessHandler(s).withFailureHandler(a).api(t,JSON.stringify(e),JSON.stringify(gasCtx())))}const API_READS=new Set(["get_rev","app_info","dashboard","day_get","days_status","missing_days","month_get","stock_list","orders_list","receipts_list","materials_list","material_check","a3_pages","documents_list","export_range","notes_list","shop_catalog","shop_requests","adjust_list","spend_summary","price_history","stock_trend","backup_list","backup_schedule_get","shop_request_get","audit_list","scan_open","open_folder"]),READ_CACHE=new Set(["stock_list","orders_list","receipts_list","materials_list","days_status","missing_days","month_get","day_get","documents_list","notes_list","shop_catalog","shop_requests","shop_request_get","adjust_list","spend_summary","price_history","stock_trend","audit_list","a3_pages","backup_list"]),RC={m:new Map,key(t,e){const s=typeof App<"u"?App:null;return!IS_GAS||!s||s.rev==null||s._noCache||!READ_CACHE.has(t)?null:t+"|"+JSON.stringify(e)+"|"+s.rev+"|"+(s.info&&s.info.today)+"|"+(localStorageGet("token")?"o":"p")},get(t){if(!t)return;const e=this.m.get(t);return e===void 0?void 0:JSON.parse(e)},put(t,e){if(t)try{this.m.set(t,JSON.stringify(e)),this.m.size>80&&this.m.delete(this.m.keys().next().value)}catch{}},clear(){this.m.clear()}};async function api(t,...e){await bridgeReady;const s=RC.key(t,e),a=RC.get(s);if(a!==void 0)return a;let n;try{IS_GAS?n=JSON.parse(await gasCall(t,e)):window.pywebview?.api?n=await window.pywebview.api.call(t,e):n=await(await fetch("/api/"+t,{method:"POST",body:JSON.stringify(e)})).json()}catch{App.setOnline(!1);const l=new Error(IS_GAS?"เชื่อมต่อ Google ไม่ได้ — ตรวจสอบอินเทอร์เน็ต":"เชื่อมต่อข้อมูลไม่ได้ — ตรวจสอบไดร์ฟกลาง");throw l.network=!0,l}if(n.ok&&/^(app_info|set_role|set_machine|set_officer_name)$/.test(t)&&n.data&&n.data.ready!==void 0&&(n.ctx&&"token"in n.ctx&&localStorageSet("token",n.ctx.token||""),Warm.set("info",n.data)),n.ctx&&("token"in n.ctx&&localStorageSet("token",n.ctx.token||""),"machine"in n.ctx&&localStorageSet("machine",n.ctx.machine||""),"name"in n.ctx&&localStorageSet("officerName",n.ctx.name||"")),!API_READS.has(t)&&typeof App<"u"&&(App._dash=null,RC.clear()),n.need_login&&IS_WEB){TeamGate.show();const i=new Error(n.error||"กรุณาใส่รหัสทีม");throw i.needLogin=!0,i}if(!n.ok)throw new Error(n.error||"เกิดข้อผิดพลาด");return RC.put(s,n.data),n.data}function openUrl(t){t&&window.open(t,"_blank","noopener")}async function printHtml(t,e){if(await bridgeReady,!IS_GAS&&window.pywebview?.api)return window.pywebview.api.print_html(t,e);const s=typeof FONT_DATA<"u"?t.replace(/__FONTS__([\w.-]+)/g,(n,i)=>FONT_DATA[i]||""):t.replaceAll("__FONTS__","fonts/"),a=document.createElement("iframe");a.style.cssText="position:fixed;width:0;height:0;border:0;right:0;bottom:0",document.body.appendChild(a),a.contentDocument.open(),a.contentDocument.write(s),a.contentDocument.close(),setTimeout(()=>a.remove(),6e4)}function downloadB64(t,e,s){const a=atob(t),n=new Uint8Array(a.length);for(let o=0;o<a.length;o++)n[o]=a.charCodeAt(o);const i=URL.createObjectURL(new Blob([n],{type:s||"application/octet-stream"})),l=document.createElement("a");l.href=i,l.download=e,document.body.appendChild(l),l.click(),setTimeout(()=>{URL.revokeObjectURL(i),l.remove()},4e3)}const TeamGate={shown:!1,async join(){const t=new URLSearchParams(location.search),e=t.get("join");if(!e)return!1;t.delete("join"),history.replaceState(null,"",location.pathname+(t.toString()?"?"+t:"")+location.hash);try{const s=await(await fetch("/api/team_login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({join:e})})).json();return s.ok?!1:(this.show(s.error),!0)}catch{return!1}},show(t){if(this.shown)return;this.shown=!0;const e=document.body.dataset.view==="widget",s=new Date,a=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];document.documentElement.getAttribute("data-skin")||document.documentElement.setAttribute("data-skin","rose"),document.getElementById("root").innerHTML=`<div class="tg2 ${e?"w":""}">
+const HRM_BUILD={v:"3.79.0",d:"2026-11-23"},$=(t,e=document)=>e.querySelector(t),$$=(t,e=document)=>[...e.querySelectorAll(t)],esc=t=>String(t??"").replace(/[&<>"']/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[e]),Perf={mode(){return localStorageGet("perf")||"auto"},lite(){return document.documentElement.classList.contains("lite")},init(){const t=this.mode(),e=navigator.hardwareConcurrency||8,s=navigator.deviceMemory||8;let a=t==="lite";t==="auto"&&(a=localStorageGet("perfAuto")==="lite"||e<=4||s<=4||matchMedia("(prefers-reduced-motion: reduce)").matches||this.softGpu()),document.documentElement.classList.toggle("lite",!!a),t==="auto"&&!a&&setTimeout(()=>this.probe(),3e3)},softGpu(){try{const t=document.createElement("canvas").getContext("webgl");if(!t)return!0;const e=t.getExtension("WEBGL_debug_renderer_info"),s=e?String(t.getParameter(e.UNMASKED_RENDERER_WEBGL)):"";return/swiftshader|llvmpipe|softpipe|basic render|software/i.test(s)}catch{return!1}},probe(){let t=0;const e=performance.now(),s=()=>{t++;const a=performance.now()-e;if(a<1500)return requestAnimationFrame(s);a/t>28&&(localStorageSet("perfAuto","lite"),document.documentElement.classList.add("lite"),typeof toast=="function"&&toast("เปิดโหมดลื่นอัตโนมัติ","เครื่องนี้ทำงานช้า — ปิดเอฟเฟกต์กระจกให้แล้ว · เปลี่ยนได้ที่ ตั้งค่า","info"))};requestAnimationFrame(s)},set(t){localStorageSet("perf",t),t!=="auto"&&localStorageSet("perfAuto",""),this.init()}};Perf.init();function debounce(t,e=140){let s;return function(...a){clearTimeout(s),s=setTimeout(()=>t.apply(this,a),e)}}const Outbox={K:"outbox",busy:null,all(){try{return JSON.parse(localStorageGet(this.K)||"[]")}catch{return[]}},save(t){localStorageSet(this.K,JSON.stringify(t)),this.paint()},pending(t){return this.all().find(e=>e.name==="day_save"&&e.args[0]===t&&!e.error)},add(t,e,s){const a=this.all().filter(n=>!(n.name===t&&n.args[0]===e[0]));return a.push({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),name:t,args:e,label:s||"",at:Date.now()}),this.save(a),this.flush(),a.length},flush(){return this.busy?this.busy:(this.busy=(async()=>{let t=!1;for(;;){const e=this.all(),s=e.find(a=>!a.error);if(!s)break;try{await api(s.name,...s.args),t=!0,this.save(this.all().filter(a=>a.id!==s.id))}catch(a){if(a.network)break;this.save(this.all().map(n=>n.id===s.id?Object.assign({},n,{error:a.message}):n)),toast("ส่งข้อมูลไม่สำเร็จ",`${esc(s.label)} — ${esc(a.message)}`,"err")}}if(t){toast("ส่งข้อมูลแล้ว ✓","บันทึกขึ้นระบบเรียบร้อย","info");try{await App.bumpRev()}catch{}}return this.busy=null,!this.all().some(e=>!e.error)})(),this.busy)},paint(){const t=this.all(),e=t.length,s=t.some(a=>a.error);document.querySelectorAll("[data-outbox]").forEach(a=>{a.classList.toggle("hidden",!e),a.classList.toggle("bad",s);const n=a.querySelector("b");n&&(n.textContent=e)})},chip(){return`<button class="ob-chip hidden" data-outbox title="ข้อมูลที่บันทึกไว้ในเครื่อง รอส่งขึ้นระบบ — กดเพื่อส่งตอนนี้">${ic("upload","sm")}รอส่ง <b>0</b></button>`},init(){window.addEventListener("online",()=>this.flush()),setInterval(()=>{this.all().some(t=>!t.error)&&!document.hidden&&this.flush()},2e4),document.addEventListener("click",t=>{if(!t.target.closest("[data-outbox]"))return;const s=this.all().filter(a=>a.error);s.length&&(toast("รายการที่ส่งไม่ผ่าน",s.map(a=>esc(a.label)+": "+esc(a.error)).join("<br>")+"<br>แก้ไขแล้วบันทึกใหม่ — รายการนี้ถูกลบออกจากคิว","err"),this.save(this.all().filter(a=>!a.error))),this.flush()}),this.all().length&&setTimeout(()=>this.flush(),1500)}},Warm={on(){return IS_GAS},key(t){return"warm."+t+"."+(localStorageGet("token")?"o":"p")},get(t){if(!this.on())return null;try{const e=JSON.parse(localStorageGet(this.key(t))||"null");return e&&Date.now()-e.at<7*864e5?e.d:null}catch{return null}},set(t,e){if(!(!this.on()||!e))try{localStorageSet(this.key(t),JSON.stringify({at:Date.now(),d:e}))}catch{}}},IS_WEB=!!window.HRM_WEB,IS_GAS=IS_WEB||!!(window.google&&window.google.script&&window.google.script.run),SRC_LABEL=IS_GAS?"Google Sheets":"ไดร์ฟกลาง",bridgeReady=new Promise(t=>{if(IS_GAS||window.pywebview?.api)return t(!0);let e=!1;window.addEventListener("pywebviewready",()=>{e=!0,t(!0)}),setTimeout(async()=>{if(e||window.pywebview?.api)return t(!0);try{const s=await fetch("/api/get_rev",{method:"POST",body:"[]"});s.ok&&(s.headers.get("content-type")||"").includes("json")&&t(!0)}catch{}},250)});function gasCtx(){return{token:localStorageGet("token")||"",machine:localStorageGet("machine")||"",name:localStorageGet("officerName")||"",today_override:window.HRM_TODAY||""}}function gasCall(t,e){return IS_WEB?fetch("/api/"+encodeURIComponent(t),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({args:e,ctx:gasCtx()})}).then(s=>s.text()):new Promise((s,a)=>google.script.run.withSuccessHandler(s).withFailureHandler(a).api(t,JSON.stringify(e),JSON.stringify(gasCtx())))}const API_READS=new Set(["get_rev","app_info","dashboard","day_get","days_status","missing_days","month_get","stock_list","orders_list","receipts_list","materials_list","material_check","a3_pages","documents_list","export_range","notes_list","shop_catalog","shop_requests","adjust_list","spend_summary","price_history","stock_trend","backup_list","backup_schedule_get","shop_request_get","audit_list","scan_open","open_folder"]),READ_CACHE=new Set(["stock_list","orders_list","receipts_list","materials_list","days_status","missing_days","month_get","day_get","documents_list","notes_list","shop_catalog","shop_requests","shop_request_get","adjust_list","spend_summary","price_history","stock_trend","audit_list","a3_pages","backup_list"]),RC={m:new Map,key(t,e){const s=typeof App<"u"?App:null;return!IS_GAS||!s||s.rev==null||s._noCache||!READ_CACHE.has(t)?null:t+"|"+JSON.stringify(e)+"|"+s.rev+"|"+(s.info&&s.info.today)+"|"+(localStorageGet("token")?"o":"p")},get(t){if(!t)return;const e=this.m.get(t);return e===void 0?void 0:JSON.parse(e)},put(t,e){if(t)try{this.m.set(t,JSON.stringify(e)),this.m.size>80&&this.m.delete(this.m.keys().next().value)}catch{}},clear(){this.m.clear()}};async function api(t,...e){await bridgeReady;const s=RC.key(t,e),a=RC.get(s);if(a!==void 0)return a;let n;try{IS_GAS?n=JSON.parse(await gasCall(t,e)):window.pywebview?.api?n=await window.pywebview.api.call(t,e):n=await(await fetch("/api/"+t,{method:"POST",body:JSON.stringify(e)})).json()}catch{App.setOnline(!1);const l=new Error(IS_GAS?"เชื่อมต่อ Google ไม่ได้ — ตรวจสอบอินเทอร์เน็ต":"เชื่อมต่อข้อมูลไม่ได้ — ตรวจสอบไดร์ฟกลาง");throw l.network=!0,l}if(n.ok&&/^(app_info|set_role|set_machine|set_officer_name)$/.test(t)&&n.data&&n.data.ready!==void 0&&(n.ctx&&"token"in n.ctx&&localStorageSet("token",n.ctx.token||""),Warm.set("info",n.data)),n.ctx&&("token"in n.ctx&&localStorageSet("token",n.ctx.token||""),"machine"in n.ctx&&localStorageSet("machine",n.ctx.machine||""),"name"in n.ctx&&localStorageSet("officerName",n.ctx.name||"")),!API_READS.has(t)&&typeof App<"u"&&(App._dash=null,RC.clear()),n.need_login&&IS_WEB){TeamGate.show();const i=new Error(n.error||"กรุณาใส่รหัสทีม");throw i.needLogin=!0,i}if(!n.ok)throw new Error(n.error||"เกิดข้อผิดพลาด");return RC.put(s,n.data),n.data}function openUrl(t){t&&window.open(t,"_blank","noopener")}async function printHtml(t,e){if(await bridgeReady,!IS_GAS&&window.pywebview?.api)return window.pywebview.api.print_html(t,e);const s=typeof FONT_DATA<"u"?t.replace(/__FONTS__([\w.-]+)/g,(n,i)=>FONT_DATA[i]||""):t.replaceAll("__FONTS__","fonts/"),a=document.createElement("iframe");a.style.cssText="position:fixed;width:0;height:0;border:0;right:0;bottom:0",document.body.appendChild(a),a.contentDocument.open(),a.contentDocument.write(s),a.contentDocument.close(),setTimeout(()=>a.remove(),6e4)}function downloadB64(t,e,s){const a=atob(t),n=new Uint8Array(a.length);for(let o=0;o<a.length;o++)n[o]=a.charCodeAt(o);const i=URL.createObjectURL(new Blob([n],{type:s||"application/octet-stream"})),l=document.createElement("a");l.href=i,l.download=e,document.body.appendChild(l),l.click(),setTimeout(()=>{URL.revokeObjectURL(i),l.remove()},4e3)}const TeamGate={shown:!1,async join(){const t=new URLSearchParams(location.search),e=t.get("join");if(!e)return!1;t.delete("join"),history.replaceState(null,"",location.pathname+(t.toString()?"?"+t:"")+location.hash);try{const s=await(await fetch("/api/team_login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({join:e})})).json();return s.ok?!1:(this.show(s.error),!0)}catch{return!1}},show(t){if(this.shown)return;this.shown=!0;const e=document.body.dataset.view==="widget",s=new Date,a=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];document.documentElement.getAttribute("data-skin")||document.documentElement.setAttribute("data-skin","rose"),document.getElementById("root").innerHTML=`<div class="tg2 ${e?"w":""}">
       <div class="tg2-l">
         <form class="tg2-glass tg-f" autocomplete="on">
           <div class="tg2-top"><span class="tg2-mark">${typeof art=="function"?art("logo",26):""}</span><span class="tg2-pill">HRM STOCK</span></div>
@@ -2315,7 +2315,8 @@ const SbMove = {
    lists  : the first cards on screen fade up one after another, bars fill, sparklines wipe in — only when a tab is opened
    numbers: count up the first time a tab is opened this session · roll to the new value when it changes after a save
    rows   : a card that was not there before slides in · a card that leaves (received, done) fades and folds away
-   nav    : one indicator glides to the active tab · swipe left/right on the page changes tab
+   nav    : a pill glides to the active tab on the same clock as the page (icon lifts, label fades in) · swipe changes tab
+   state  : each tab keeps its scroll position
    sheets : drag the handle down to close · toasts sit above the bottom bar (ok pops · error shakes · warning pulses)
    prefers-reduced-motion → none of the travel, only instant state. Nothing here waits: data shows as soon as it exists. */
 (() => {
@@ -2338,40 +2339,54 @@ const SbMove = {
     return m;
   }
 
-  /* ---------- page transition (the old page node itself slides out — no copy) ---------- */
-  let oldPage = null;
+  /* ---------- one shared clock for the tab change (v3.79) ----------
+     page + pill + icon + label all run on the same 340 ms clock from the tap. Tabs that fetch data render twice
+     (loader → content): the second render picks the animations up at the elapsed time, so nothing restarts or jumps. */
+  const DUR = 340, EASE_PAGE = 'cubic-bezier(.22,1,.36,1)', EASE_PILL = 'cubic-bezier(.34,1.2,.64,1)';
+  let TX = null;                       // {t0, tab, prev, dir, fromX}
+  const scrollMem = {};
+  const elapsed = () => TX && MOff.tab === TX.tab ? performance.now() - TX.t0 : Infinity;
+
   const go = MOff.go;
   MOff.go = function (t) {
-    const from = this.tab, O = order(), dir = O.indexOf(t) >= O.indexOf(from) ? 1 : -1;
-    this._dir = dir;
+    const from = this.tab;
+    if (from === t || still()) { if (from !== t) scrollMem[from] = scrollY; const r = go.apply(this, arguments); if (from !== t) restoreScroll(t); return r; }
+    const O = order(), dir = O.indexOf(t) >= O.indexOf(from) ? 1 : -1;
+    this._dir = dir; scrollMem[from] = scrollY;
+    document.querySelectorAll('.mt-ghost').forEach(g => g.remove());          // rapid taps: never stack old pages
+    const nav = document.querySelector('.mo-nav'), pill = nav && nav.querySelector('.mt-pill');
+    let fromX = null;
+    if (pill) { const a = pill.getBoundingClientRect(), b = nav.getBoundingClientRect(); fromX = a.left - b.left; }   // where the pill is right now (even mid-flight)
     const page = document.querySelector('.mo-page');
-    oldPage = null;
-    if (page && from !== t && !still() && strong) {
+    let ghost = null;
+    if (page && strong) {
       const r = page.getBoundingClientRect(), vh = innerHeight;
-      // only what is on screen travels out — the rest of a long list is dropped first (keeps the switch cheap)
-      const off = [...page.children].filter(c => c.getBoundingClientRect().top > vh);
-      oldPage = { el: page, r, dir, off };
+      ghost = { el: page, r, off: [...page.children].filter(c => c.getBoundingClientRect().top > vh) };
     }
+    TX = { t0: performance.now(), tab: t, prev: from, dir, fromX };
     keysBefore = null;                 // a tab change is not "rows came and went"
     const out = go.apply(this, arguments);
-    if (oldPage && !oldPage.el.isConnected) {
-      const { el, r, off } = oldPage, g = el;
+    restoreScroll(t);
+    if (ghost && !ghost.el.isConnected) {
+      const { el, r, off } = ghost;
       off.forEach(c => c.remove());
-      g.classList.remove('enter'); g.classList.add('mt-ghost');
-      Object.assign(g.style, { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: Math.max(0, innerHeight - r.top) + 'px' });
-      g.style.setProperty('--dx', (-dir * 28) + 'px');
-      document.body.append(g);
-      requestAnimationFrame(() => g.classList.add('out'));
-      setTimeout(() => g.remove(), 260);
+      el.classList.remove('enter'); el.classList.add('mt-ghost');
+      Object.assign(el.style, { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: Math.max(0, innerHeight - r.top) + 'px' });
+      document.body.append(el);
+      // the old page is gone by ~55% of the clock → the two never sit on top of each other for long
+      el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translate3d(${-dir * 20}px,0,0) scale(.985)` }],
+        { duration: DUR * 0.55, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' }).onfinish = () => el.remove();
     }
-    oldPage = null;
     return out;
   };
+  function restoreScroll(t) {
+    const y = scrollMem[t] || 0;
+    if (y) requestAnimationFrame(() => { if (MOff.tab === t && document.documentElement.scrollHeight > y + 200) scrollTo(0, y); });
+  }
 
   /* ---------- after every phone render: read everything first, then write (one layout) ---------- */
   const render = MOff.render;
   MOff.render = function () {
-    const ind = document.querySelector('.mo-nav .mt-ind'), prevX = ind ? ind._x : null;
     let before = null, leaving = [];
     if (keysBefore !== null && !still()) {
       before = snapRows();
@@ -2379,25 +2394,27 @@ const SbMove = {
       before.forEach((el, k) => { const r = el.getBoundingClientRect(); if (r.bottom > 0 && r.top < vh) leaving.push([k, el, r]); });
     }
     const out = render.apply(this, arguments);
-    try { after.call(this, prevX, before, leaving); } catch (e) { console.error('motion', e); }
+    try { after.call(this, before, leaving); } catch (e) { console.error('motion', e); }
     keysBefore = true;
     return out;
   };
 
   const NUMS = [['.mo-stk', '.v b.num'], ['.mo-banner.top', ':scope > div > b'], ['.mo-cats > *', 'i, b, em']];
-  function after(prevX, before, leaving) {
+  function after(before, leaving) {
     const page = document.querySelector('.mo-page'); if (!page) return;
-    const enter = page.classList.contains('enter'), anim = !still(), vh = innerHeight;
+    const anim = !still(), vh = innerHeight, e = elapsed(), inTx = anim && e < DUR;
+    page.classList.remove('enter');                     // the old CSS entrance is replaced by the shared clock
     // ---- read
     const nav = document.querySelector('.mo-nav'), on = nav && nav.querySelector('a.on');
-    const navX = on ? on.offsetLeft + on.offsetWidth / 2 - 14 : null;
-    const items = anim && enter ? [...page.querySelectorAll('.mo-li, .mo-parcel, .mo-sup, .mo-cats > *, .mo-h3')].slice(0, 24) : [];
+    const box = on ? { x: on.offsetLeft + 3, y: on.offsetTop - 3, w: on.offsetWidth - 6, h: on.offsetHeight + 4 } : null;
+    const prevLink = inTx && TX.prev && nav ? nav.querySelector(`[data-tab="${TX.prev}"]`) : null;
+    const items = inTx ? [...page.querySelectorAll('.mo-li, .mo-parcel, .mo-sup, .mo-cats > *, .mo-h3')].slice(0, 24) : [];
     const itemTop = items.map(el => el.getBoundingClientRect().top);
-    const bars = anim && enter ? [...page.querySelectorAll('.mo-lvl i')].slice(0, 14) : [];
+    const bars = inTx ? [...page.querySelectorAll('.mo-lvl i')].slice(0, 14) : [];
     const barTop = bars.map(el => el.getBoundingClientRect().top);
-    const sps = anim && enter ? [...page.querySelectorAll('.mo-sp')].slice(0, 10) : [];
+    const sps = inTx ? [...page.querySelectorAll('.mo-sp')].slice(0, 10) : [];
     const spTop = sps.map(el => el.getBoundingClientRect().top);
-    const first = enter && !seen.has(MOff.tab); if (enter) seen.add(MOff.tab);
+    const first = inTx && !seen.has(MOff.tab); if (inTx && page.querySelector('.mo-li, .mo-banner, .mo-cats')) seen.add(MOff.tab);
     const nums = [];
     NUMS.forEach(([host, sel]) => page.querySelectorAll(host).forEach((h, idx) => {
       const el = h.querySelector(sel); if (!el) return;
@@ -2407,8 +2424,13 @@ const SbMove = {
     const numTop = anim ? nums.map(n => n[0].getBoundingClientRect().top) : [];
     const now = before ? snapRows() : null;
     // ---- write
-    if (enter) page.dataset.dir = (this._dir || 1) > 0 ? 'f' : 'b';
-    indicator(nav, on, navX, prevX);
+    pillDraw(nav, on, box, inTx ? e : Infinity, prevLink);
+    if (inTx) {
+      const a = page.animate([{ opacity: 0, transform: `translate3d(${TX.dir * 20}px,0,0) scale(.985)` }, { opacity: 1, transform: 'none' }],
+        { duration: DUR, easing: EASE_PAGE, fill: 'backwards' });
+      a.currentTime = e;
+      if (!page.querySelector('.mb-loading')) restoreScroll(MOff.tab);
+    }
     nums.forEach(([el, to, tail, key], i) => {
       const was = vals.get(key); vals.set(key, to);
       if (!anim || numTop[i] > vh) return;
@@ -2416,13 +2438,39 @@ const SbMove = {
       else if (was !== undefined && was !== to) count(el, was, to, tail, 520, true);
     });
     if (!anim) return;
-    let k = 0;
-    items.forEach((el, i) => { if (itemTop[i] < vh && k < 8) { el.style.setProperty('--i', k++); el.classList.add('mt-in'); } });
-    bars.forEach((el, i) => { if (barTop[i] < vh) el.classList.add('mt-fill'); });
-    sps.forEach((el, i) => { if (spTop[i] < vh) el.classList.add('mt-draw'); });   // sparkline wipes in (GPU: transform only)
+    if (inTx) {
+      page.style.setProperty('--e', Math.round(e) + 'ms');
+      let k = 0;
+      items.forEach((el, i) => { if (itemTop[i] < vh && k < 8) { el.style.setProperty('--i', k++); el.classList.add('mt-in'); } });
+      bars.forEach((el, i) => { if (barTop[i] < vh) el.classList.add('mt-fill'); });
+      sps.forEach((el, i) => { if (spTop[i] < vh) el.classList.add('mt-draw'); });
+    }
     if (now) {
       now.forEach((el, key) => { if (!before.has(key)) el.classList.add('mt-new'); });
       leaving.forEach(([key, el, r]) => { if (!now.has(key)) leaveGhost(el, r); });
+    }
+  }
+
+  /* ---------- bottom bar: a pill glides to the new tab on the same clock as the page ---------- */
+  function pillDraw(nav, on, box, e, prevLink) {
+    if (!nav || !on || !box) return;
+    nav.classList.add('mt-nav');
+    const pill = document.createElement('i'); pill.className = 'mt-pill';
+    Object.assign(pill.style, { width: box.w + 'px', height: box.h + 'px', top: box.y + 'px', transform: `translateX(${box.x}px)` });
+    nav.prepend(pill);
+    if (e >= DUR) return;
+    const fx = TX.fromX;
+    if (fx !== null && fx !== undefined && Math.abs(fx - box.x) > 1) {
+      pill.animate([{ transform: `translateX(${fx}px) scaleX(1)` }, { transform: `translateX(${(fx + box.x) / 2}px) scaleX(1.12)`, offset: .45 }, { transform: `translateX(${box.x}px) scaleX(1)` }],
+        { duration: DUR, easing: EASE_PILL }).currentTime = e;
+    }
+    const ic = on.querySelector('svg'), lb = on.querySelector('span');
+    if (ic) ic.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.14)', offset: .5 }, { transform: 'scale(1.08)' }], { duration: DUR, easing: EASE_PAGE, fill: 'backwards' }).currentTime = e;
+    if (lb) lb.animate([{ opacity: .55, transform: 'translateY(2px)' }, { opacity: 1, transform: 'none' }], { duration: DUR, easing: EASE_PAGE, fill: 'backwards' }).currentTime = e;
+    if (prevLink && prevLink !== on) {
+      const pi = prevLink.querySelector('svg'), pl = prevLink.querySelector('span');
+      if (pi) pi.animate([{ transform: 'scale(1.08)', opacity: 1 }, { transform: 'scale(1)', opacity: .6 }], { duration: DUR * .7, easing: EASE_PAGE, fill: 'backwards' }).currentTime = e;
+      if (pl) pl.animate([{ opacity: 1 }, { opacity: .6 }], { duration: DUR * .7, easing: EASE_PAGE, fill: 'backwards' }).currentTime = e;
     }
   }
 
@@ -2448,17 +2496,6 @@ const SbMove = {
     };
     el.textContent = fmt(from) + tail;
     requestAnimationFrame(step);
-  }
-
-  /* ---------- bottom bar: one indicator glides to the active tab ---------- */
-  function indicator(nav, on, x, prevX) {
-    if (!nav || !on) return;
-    nav.classList.add('mt-nav');
-    const ind = document.createElement('i'); ind.className = 'mt-ind'; ind._x = x;
-    if (prevX === null || prevX === undefined || prevX === x || still()) { ind.style.transform = `translateX(${x}px)`; nav.append(ind); return; }
-    ind.style.transform = `translateX(${prevX}px)`; nav.append(ind);
-    on.classList.add('mt-pop');
-    requestAnimationFrame(() => requestAnimationFrame(() => { ind.classList.add('go'); ind.style.transform = `translateX(${x}px)`; }));
   }
 
   /* ---------- swipe the page to change tab ---------- */
