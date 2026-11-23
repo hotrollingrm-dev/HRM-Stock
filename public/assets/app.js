@@ -1,4 +1,4 @@
-const HRM_BUILD={v:"3.76.1",d:"2026-11-19"},$=(t,e=document)=>e.querySelector(t),$$=(t,e=document)=>[...e.querySelectorAll(t)],esc=t=>String(t??"").replace(/[&<>"']/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[e]),Perf={mode(){return localStorageGet("perf")||"auto"},lite(){return document.documentElement.classList.contains("lite")},init(){const t=this.mode(),e=navigator.hardwareConcurrency||8,s=navigator.deviceMemory||8;let a=t==="lite";t==="auto"&&(a=localStorageGet("perfAuto")==="lite"||e<=4||s<=4||matchMedia("(prefers-reduced-motion: reduce)").matches||this.softGpu()),document.documentElement.classList.toggle("lite",!!a),t==="auto"&&!a&&setTimeout(()=>this.probe(),3e3)},softGpu(){try{const t=document.createElement("canvas").getContext("webgl");if(!t)return!0;const e=t.getExtension("WEBGL_debug_renderer_info"),s=e?String(t.getParameter(e.UNMASKED_RENDERER_WEBGL)):"";return/swiftshader|llvmpipe|softpipe|basic render|software/i.test(s)}catch{return!1}},probe(){let t=0;const e=performance.now(),s=()=>{t++;const a=performance.now()-e;if(a<1500)return requestAnimationFrame(s);a/t>28&&(localStorageSet("perfAuto","lite"),document.documentElement.classList.add("lite"),typeof toast=="function"&&toast("เปิดโหมดลื่นอัตโนมัติ","เครื่องนี้ทำงานช้า — ปิดเอฟเฟกต์กระจกให้แล้ว · เปลี่ยนได้ที่ ตั้งค่า","info"))};requestAnimationFrame(s)},set(t){localStorageSet("perf",t),t!=="auto"&&localStorageSet("perfAuto",""),this.init()}};Perf.init();function debounce(t,e=140){let s;return function(...a){clearTimeout(s),s=setTimeout(()=>t.apply(this,a),e)}}const Outbox={K:"outbox",busy:null,all(){try{return JSON.parse(localStorageGet(this.K)||"[]")}catch{return[]}},save(t){localStorageSet(this.K,JSON.stringify(t)),this.paint()},pending(t){return this.all().find(e=>e.name==="day_save"&&e.args[0]===t&&!e.error)},add(t,e,s){const a=this.all().filter(n=>!(n.name===t&&n.args[0]===e[0]));return a.push({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),name:t,args:e,label:s||"",at:Date.now()}),this.save(a),this.flush(),a.length},flush(){return this.busy?this.busy:(this.busy=(async()=>{let t=!1;for(;;){const e=this.all(),s=e.find(a=>!a.error);if(!s)break;try{await api(s.name,...s.args),t=!0,this.save(this.all().filter(a=>a.id!==s.id))}catch(a){if(a.network)break;this.save(this.all().map(n=>n.id===s.id?Object.assign({},n,{error:a.message}):n)),toast("ส่งข้อมูลไม่สำเร็จ",`${esc(s.label)} — ${esc(a.message)}`,"err")}}if(t){toast("ส่งข้อมูลแล้ว ✓","บันทึกขึ้นระบบเรียบร้อย","info");try{await App.bumpRev()}catch{}}return this.busy=null,!this.all().some(e=>!e.error)})(),this.busy)},paint(){const t=this.all(),e=t.length,s=t.some(a=>a.error);document.querySelectorAll("[data-outbox]").forEach(a=>{a.classList.toggle("hidden",!e),a.classList.toggle("bad",s);const n=a.querySelector("b");n&&(n.textContent=e)})},chip(){return`<button class="ob-chip hidden" data-outbox title="ข้อมูลที่บันทึกไว้ในเครื่อง รอส่งขึ้นระบบ — กดเพื่อส่งตอนนี้">${ic("upload","sm")}รอส่ง <b>0</b></button>`},init(){window.addEventListener("online",()=>this.flush()),setInterval(()=>{this.all().some(t=>!t.error)&&!document.hidden&&this.flush()},2e4),document.addEventListener("click",t=>{if(!t.target.closest("[data-outbox]"))return;const s=this.all().filter(a=>a.error);s.length&&(toast("รายการที่ส่งไม่ผ่าน",s.map(a=>esc(a.label)+": "+esc(a.error)).join("<br>")+"<br>แก้ไขแล้วบันทึกใหม่ — รายการนี้ถูกลบออกจากคิว","err"),this.save(this.all().filter(a=>!a.error))),this.flush()}),this.all().length&&setTimeout(()=>this.flush(),1500)}},Warm={on(){return IS_GAS},key(t){return"warm."+t+"."+(localStorageGet("token")?"o":"p")},get(t){if(!this.on())return null;try{const e=JSON.parse(localStorageGet(this.key(t))||"null");return e&&Date.now()-e.at<7*864e5?e.d:null}catch{return null}},set(t,e){if(!(!this.on()||!e))try{localStorageSet(this.key(t),JSON.stringify({at:Date.now(),d:e}))}catch{}}},IS_WEB=!!window.HRM_WEB,IS_GAS=IS_WEB||!!(window.google&&window.google.script&&window.google.script.run),SRC_LABEL=IS_GAS?"Google Sheets":"ไดร์ฟกลาง",bridgeReady=new Promise(t=>{if(IS_GAS||window.pywebview?.api)return t(!0);let e=!1;window.addEventListener("pywebviewready",()=>{e=!0,t(!0)}),setTimeout(async()=>{if(e||window.pywebview?.api)return t(!0);try{const s=await fetch("/api/get_rev",{method:"POST",body:"[]"});s.ok&&(s.headers.get("content-type")||"").includes("json")&&t(!0)}catch{}},250)});function gasCtx(){return{token:localStorageGet("token")||"",machine:localStorageGet("machine")||"",name:localStorageGet("officerName")||"",today_override:window.HRM_TODAY||""}}function gasCall(t,e){return IS_WEB?fetch("/api/"+encodeURIComponent(t),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({args:e,ctx:gasCtx()})}).then(s=>s.text()):new Promise((s,a)=>google.script.run.withSuccessHandler(s).withFailureHandler(a).api(t,JSON.stringify(e),JSON.stringify(gasCtx())))}const API_READS=new Set(["get_rev","app_info","dashboard","day_get","days_status","missing_days","month_get","stock_list","orders_list","receipts_list","materials_list","material_check","a3_pages","documents_list","export_range","notes_list","shop_catalog","shop_requests","adjust_list","spend_summary","price_history","stock_trend","backup_list","backup_schedule_get","shop_request_get","audit_list","scan_open","open_folder"]),READ_CACHE=new Set(["stock_list","orders_list","receipts_list","materials_list","days_status","missing_days","month_get","day_get","documents_list","notes_list","shop_catalog","shop_requests","shop_request_get","adjust_list","spend_summary","price_history","stock_trend","audit_list","a3_pages","backup_list"]),RC={m:new Map,key(t,e){const s=typeof App<"u"?App:null;return!IS_GAS||!s||s.rev==null||s._noCache||!READ_CACHE.has(t)?null:t+"|"+JSON.stringify(e)+"|"+s.rev+"|"+(s.info&&s.info.today)+"|"+(localStorageGet("token")?"o":"p")},get(t){if(!t)return;const e=this.m.get(t);return e===void 0?void 0:JSON.parse(e)},put(t,e){if(t)try{this.m.set(t,JSON.stringify(e)),this.m.size>80&&this.m.delete(this.m.keys().next().value)}catch{}},clear(){this.m.clear()}};async function api(t,...e){await bridgeReady;const s=RC.key(t,e),a=RC.get(s);if(a!==void 0)return a;let n;try{IS_GAS?n=JSON.parse(await gasCall(t,e)):window.pywebview?.api?n=await window.pywebview.api.call(t,e):n=await(await fetch("/api/"+t,{method:"POST",body:JSON.stringify(e)})).json()}catch{App.setOnline(!1);const l=new Error(IS_GAS?"เชื่อมต่อ Google ไม่ได้ — ตรวจสอบอินเทอร์เน็ต":"เชื่อมต่อข้อมูลไม่ได้ — ตรวจสอบไดร์ฟกลาง");throw l.network=!0,l}if(n.ok&&/^(app_info|set_role|set_machine|set_officer_name)$/.test(t)&&n.data&&n.data.ready!==void 0&&(n.ctx&&"token"in n.ctx&&localStorageSet("token",n.ctx.token||""),Warm.set("info",n.data)),n.ctx&&("token"in n.ctx&&localStorageSet("token",n.ctx.token||""),"machine"in n.ctx&&localStorageSet("machine",n.ctx.machine||""),"name"in n.ctx&&localStorageSet("officerName",n.ctx.name||"")),!API_READS.has(t)&&typeof App<"u"&&(App._dash=null,RC.clear()),n.need_login&&IS_WEB){TeamGate.show();const i=new Error(n.error||"กรุณาใส่รหัสทีม");throw i.needLogin=!0,i}if(!n.ok)throw new Error(n.error||"เกิดข้อผิดพลาด");return RC.put(s,n.data),n.data}function openUrl(t){t&&window.open(t,"_blank","noopener")}async function printHtml(t,e){if(await bridgeReady,!IS_GAS&&window.pywebview?.api)return window.pywebview.api.print_html(t,e);const s=typeof FONT_DATA<"u"?t.replace(/__FONTS__([\w.-]+)/g,(n,i)=>FONT_DATA[i]||""):t.replaceAll("__FONTS__","fonts/"),a=document.createElement("iframe");a.style.cssText="position:fixed;width:0;height:0;border:0;right:0;bottom:0",document.body.appendChild(a),a.contentDocument.open(),a.contentDocument.write(s),a.contentDocument.close(),setTimeout(()=>a.remove(),6e4)}function downloadB64(t,e,s){const a=atob(t),n=new Uint8Array(a.length);for(let o=0;o<a.length;o++)n[o]=a.charCodeAt(o);const i=URL.createObjectURL(new Blob([n],{type:s||"application/octet-stream"})),l=document.createElement("a");l.href=i,l.download=e,document.body.appendChild(l),l.click(),setTimeout(()=>{URL.revokeObjectURL(i),l.remove()},4e3)}const TeamGate={shown:!1,async join(){const t=new URLSearchParams(location.search),e=t.get("join");if(!e)return!1;t.delete("join"),history.replaceState(null,"",location.pathname+(t.toString()?"?"+t:"")+location.hash);try{const s=await(await fetch("/api/team_login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({join:e})})).json();return s.ok?!1:(this.show(s.error),!0)}catch{return!1}},show(t){if(this.shown)return;this.shown=!0;const e=document.body.dataset.view==="widget",s=new Date,a=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];document.documentElement.getAttribute("data-skin")||document.documentElement.setAttribute("data-skin","rose"),document.getElementById("root").innerHTML=`<div class="tg2 ${e?"w":""}">
+const HRM_BUILD={v:"3.78.0",d:"2026-11-23"},$=(t,e=document)=>e.querySelector(t),$$=(t,e=document)=>[...e.querySelectorAll(t)],esc=t=>String(t??"").replace(/[&<>"']/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[e]),Perf={mode(){return localStorageGet("perf")||"auto"},lite(){return document.documentElement.classList.contains("lite")},init(){const t=this.mode(),e=navigator.hardwareConcurrency||8,s=navigator.deviceMemory||8;let a=t==="lite";t==="auto"&&(a=localStorageGet("perfAuto")==="lite"||e<=4||s<=4||matchMedia("(prefers-reduced-motion: reduce)").matches||this.softGpu()),document.documentElement.classList.toggle("lite",!!a),t==="auto"&&!a&&setTimeout(()=>this.probe(),3e3)},softGpu(){try{const t=document.createElement("canvas").getContext("webgl");if(!t)return!0;const e=t.getExtension("WEBGL_debug_renderer_info"),s=e?String(t.getParameter(e.UNMASKED_RENDERER_WEBGL)):"";return/swiftshader|llvmpipe|softpipe|basic render|software/i.test(s)}catch{return!1}},probe(){let t=0;const e=performance.now(),s=()=>{t++;const a=performance.now()-e;if(a<1500)return requestAnimationFrame(s);a/t>28&&(localStorageSet("perfAuto","lite"),document.documentElement.classList.add("lite"),typeof toast=="function"&&toast("เปิดโหมดลื่นอัตโนมัติ","เครื่องนี้ทำงานช้า — ปิดเอฟเฟกต์กระจกให้แล้ว · เปลี่ยนได้ที่ ตั้งค่า","info"))};requestAnimationFrame(s)},set(t){localStorageSet("perf",t),t!=="auto"&&localStorageSet("perfAuto",""),this.init()}};Perf.init();function debounce(t,e=140){let s;return function(...a){clearTimeout(s),s=setTimeout(()=>t.apply(this,a),e)}}const Outbox={K:"outbox",busy:null,all(){try{return JSON.parse(localStorageGet(this.K)||"[]")}catch{return[]}},save(t){localStorageSet(this.K,JSON.stringify(t)),this.paint()},pending(t){return this.all().find(e=>e.name==="day_save"&&e.args[0]===t&&!e.error)},add(t,e,s){const a=this.all().filter(n=>!(n.name===t&&n.args[0]===e[0]));return a.push({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),name:t,args:e,label:s||"",at:Date.now()}),this.save(a),this.flush(),a.length},flush(){return this.busy?this.busy:(this.busy=(async()=>{let t=!1;for(;;){const e=this.all(),s=e.find(a=>!a.error);if(!s)break;try{await api(s.name,...s.args),t=!0,this.save(this.all().filter(a=>a.id!==s.id))}catch(a){if(a.network)break;this.save(this.all().map(n=>n.id===s.id?Object.assign({},n,{error:a.message}):n)),toast("ส่งข้อมูลไม่สำเร็จ",`${esc(s.label)} — ${esc(a.message)}`,"err")}}if(t){toast("ส่งข้อมูลแล้ว ✓","บันทึกขึ้นระบบเรียบร้อย","info");try{await App.bumpRev()}catch{}}return this.busy=null,!this.all().some(e=>!e.error)})(),this.busy)},paint(){const t=this.all(),e=t.length,s=t.some(a=>a.error);document.querySelectorAll("[data-outbox]").forEach(a=>{a.classList.toggle("hidden",!e),a.classList.toggle("bad",s);const n=a.querySelector("b");n&&(n.textContent=e)})},chip(){return`<button class="ob-chip hidden" data-outbox title="ข้อมูลที่บันทึกไว้ในเครื่อง รอส่งขึ้นระบบ — กดเพื่อส่งตอนนี้">${ic("upload","sm")}รอส่ง <b>0</b></button>`},init(){window.addEventListener("online",()=>this.flush()),setInterval(()=>{this.all().some(t=>!t.error)&&!document.hidden&&this.flush()},2e4),document.addEventListener("click",t=>{if(!t.target.closest("[data-outbox]"))return;const s=this.all().filter(a=>a.error);s.length&&(toast("รายการที่ส่งไม่ผ่าน",s.map(a=>esc(a.label)+": "+esc(a.error)).join("<br>")+"<br>แก้ไขแล้วบันทึกใหม่ — รายการนี้ถูกลบออกจากคิว","err"),this.save(this.all().filter(a=>!a.error))),this.flush()}),this.all().length&&setTimeout(()=>this.flush(),1500)}},Warm={on(){return IS_GAS},key(t){return"warm."+t+"."+(localStorageGet("token")?"o":"p")},get(t){if(!this.on())return null;try{const e=JSON.parse(localStorageGet(this.key(t))||"null");return e&&Date.now()-e.at<7*864e5?e.d:null}catch{return null}},set(t,e){if(!(!this.on()||!e))try{localStorageSet(this.key(t),JSON.stringify({at:Date.now(),d:e}))}catch{}}},IS_WEB=!!window.HRM_WEB,IS_GAS=IS_WEB||!!(window.google&&window.google.script&&window.google.script.run),SRC_LABEL=IS_GAS?"Google Sheets":"ไดร์ฟกลาง",bridgeReady=new Promise(t=>{if(IS_GAS||window.pywebview?.api)return t(!0);let e=!1;window.addEventListener("pywebviewready",()=>{e=!0,t(!0)}),setTimeout(async()=>{if(e||window.pywebview?.api)return t(!0);try{const s=await fetch("/api/get_rev",{method:"POST",body:"[]"});s.ok&&(s.headers.get("content-type")||"").includes("json")&&t(!0)}catch{}},250)});function gasCtx(){return{token:localStorageGet("token")||"",machine:localStorageGet("machine")||"",name:localStorageGet("officerName")||"",today_override:window.HRM_TODAY||""}}function gasCall(t,e){return IS_WEB?fetch("/api/"+encodeURIComponent(t),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({args:e,ctx:gasCtx()})}).then(s=>s.text()):new Promise((s,a)=>google.script.run.withSuccessHandler(s).withFailureHandler(a).api(t,JSON.stringify(e),JSON.stringify(gasCtx())))}const API_READS=new Set(["get_rev","app_info","dashboard","day_get","days_status","missing_days","month_get","stock_list","orders_list","receipts_list","materials_list","material_check","a3_pages","documents_list","export_range","notes_list","shop_catalog","shop_requests","adjust_list","spend_summary","price_history","stock_trend","backup_list","backup_schedule_get","shop_request_get","audit_list","scan_open","open_folder"]),READ_CACHE=new Set(["stock_list","orders_list","receipts_list","materials_list","days_status","missing_days","month_get","day_get","documents_list","notes_list","shop_catalog","shop_requests","shop_request_get","adjust_list","spend_summary","price_history","stock_trend","audit_list","a3_pages","backup_list"]),RC={m:new Map,key(t,e){const s=typeof App<"u"?App:null;return!IS_GAS||!s||s.rev==null||s._noCache||!READ_CACHE.has(t)?null:t+"|"+JSON.stringify(e)+"|"+s.rev+"|"+(s.info&&s.info.today)+"|"+(localStorageGet("token")?"o":"p")},get(t){if(!t)return;const e=this.m.get(t);return e===void 0?void 0:JSON.parse(e)},put(t,e){if(t)try{this.m.set(t,JSON.stringify(e)),this.m.size>80&&this.m.delete(this.m.keys().next().value)}catch{}},clear(){this.m.clear()}};async function api(t,...e){await bridgeReady;const s=RC.key(t,e),a=RC.get(s);if(a!==void 0)return a;let n;try{IS_GAS?n=JSON.parse(await gasCall(t,e)):window.pywebview?.api?n=await window.pywebview.api.call(t,e):n=await(await fetch("/api/"+t,{method:"POST",body:JSON.stringify(e)})).json()}catch{App.setOnline(!1);const l=new Error(IS_GAS?"เชื่อมต่อ Google ไม่ได้ — ตรวจสอบอินเทอร์เน็ต":"เชื่อมต่อข้อมูลไม่ได้ — ตรวจสอบไดร์ฟกลาง");throw l.network=!0,l}if(n.ok&&/^(app_info|set_role|set_machine|set_officer_name)$/.test(t)&&n.data&&n.data.ready!==void 0&&(n.ctx&&"token"in n.ctx&&localStorageSet("token",n.ctx.token||""),Warm.set("info",n.data)),n.ctx&&("token"in n.ctx&&localStorageSet("token",n.ctx.token||""),"machine"in n.ctx&&localStorageSet("machine",n.ctx.machine||""),"name"in n.ctx&&localStorageSet("officerName",n.ctx.name||"")),!API_READS.has(t)&&typeof App<"u"&&(App._dash=null,RC.clear()),n.need_login&&IS_WEB){TeamGate.show();const i=new Error(n.error||"กรุณาใส่รหัสทีม");throw i.needLogin=!0,i}if(!n.ok)throw new Error(n.error||"เกิดข้อผิดพลาด");return RC.put(s,n.data),n.data}function openUrl(t){t&&window.open(t,"_blank","noopener")}async function printHtml(t,e){if(await bridgeReady,!IS_GAS&&window.pywebview?.api)return window.pywebview.api.print_html(t,e);const s=typeof FONT_DATA<"u"?t.replace(/__FONTS__([\w.-]+)/g,(n,i)=>FONT_DATA[i]||""):t.replaceAll("__FONTS__","fonts/"),a=document.createElement("iframe");a.style.cssText="position:fixed;width:0;height:0;border:0;right:0;bottom:0",document.body.appendChild(a),a.contentDocument.open(),a.contentDocument.write(s),a.contentDocument.close(),setTimeout(()=>a.remove(),6e4)}function downloadB64(t,e,s){const a=atob(t),n=new Uint8Array(a.length);for(let o=0;o<a.length;o++)n[o]=a.charCodeAt(o);const i=URL.createObjectURL(new Blob([n],{type:s||"application/octet-stream"})),l=document.createElement("a");l.href=i,l.download=e,document.body.appendChild(l),l.click(),setTimeout(()=>{URL.revokeObjectURL(i),l.remove()},4e3)}const TeamGate={shown:!1,async join(){const t=new URLSearchParams(location.search),e=t.get("join");if(!e)return!1;t.delete("join"),history.replaceState(null,"",location.pathname+(t.toString()?"?"+t:"")+location.hash);try{const s=await(await fetch("/api/team_login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({join:e})})).json();return s.ok?!1:(this.show(s.error),!0)}catch{return!1}},show(t){if(this.shown)return;this.shown=!0;const e=document.body.dataset.view==="widget",s=new Date,a=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];document.documentElement.getAttribute("data-skin")||document.documentElement.setAttribute("data-skin","rose"),document.getElementById("root").innerHTML=`<div class="tg2 ${e?"w":""}">
       <div class="tg2-l">
         <form class="tg2-glass tg-f" autocomplete="on">
           <div class="tg2-top"><span class="tg2-mark">${typeof art=="function"?art("logo",26):""}</span><span class="tg2-pill">HRM STOCK</span></div>
@@ -2048,7 +2048,11 @@ document.addEventListener('click', e => { if (e.target.closest && e.target.close
     const b = lastBtn && Date.now() - lastAt < 1500 && lastBtn.isConnected ? lastBtn : null;
     if (b) { b.classList.add('is-busy'); b.setAttribute('aria-busy', 'true'); }
     netOn();
-    try { return await raw(t, ...e); }
+    try {
+      const v = await raw(t, ...e);
+      if (b && b.isConnected) { b.classList.add('is-done'); setTimeout(() => b.classList.remove('is-done'), 900); }   // v3.78 · saved ✓ on the button itself
+      return v;
+    }
     finally { memo.clear(); netOff(); if (b) { b.classList.remove('is-busy'); b.removeAttribute('aria-busy'); } }
   };
 
@@ -2303,5 +2307,207 @@ const SbMove = {
     }
     return out;
   };
+})();
+
+/* ===== patch 014-motion.js ===== */
+/* v3.78 · phone motion (Officer + Operator) — only transform / opacity, every one has a job:
+   page   : the new tab slides in from the side it lives on (nav order), the old one slides out the other way
+   lists  : the first cards on screen fade up one after another, bars fill, sparklines wipe in — only when a tab is opened
+   numbers: count up the first time a tab is opened this session · roll to the new value when it changes after a save
+   rows   : a card that was not there before slides in · a card that leaves (received, done) fades and folds away
+   nav    : one indicator glides to the active tab · swipe left/right on the page changes tab
+   sheets : drag the handle down to close · toasts sit above the bottom bar (ok pops · error shakes · warning pulses)
+   prefers-reduced-motion → none of the travel, only instant state. Nothing here waits: data shows as soon as it exists. */
+(() => {
+  if (typeof MOff === 'undefined') return;
+  const RM = matchMedia('(prefers-reduced-motion: reduce)');
+  const still = () => RM.matches;
+  // the outgoing page costs one extra layout — only on phones with power to spare (≥6 cores or ≥4 GB); others get the incoming slide only
+  const strong = (navigator.hardwareConcurrency || 4) >= 6 || (navigator.deviceMemory || 0) >= 4;
+  const order = () => [...document.querySelectorAll('.mo-nav [data-tab]')].map(a => a.dataset.tab);
+  const seen = new Set();            // tabs whose numbers already counted up this session
+  const vals = new Map();            // last shown numbers, to roll only real changes
+  let keysBefore = null;
+
+  /* ---------- rows: key of a card (to tell new / gone ones apart) ---------- */
+  const ROW = '.mo-page .mo-li, .mo-page .mo-parcel, .mo-page .mo-sup';
+  const keyOf = el => { const d = el.dataset; const k = d.mat || d.rid || d.oid || d.id || d.k || d.ref || ''; return k ? el.className.split(' ')[0] + ':' + k : ''; };
+  function snapRows() {
+    const m = new Map();
+    document.querySelectorAll(ROW).forEach(el => { const k = keyOf(el); if (k && !m.has(k)) m.set(k, el); });
+    return m;
+  }
+
+  /* ---------- page transition (the old page node itself slides out — no copy) ---------- */
+  let oldPage = null;
+  const go = MOff.go;
+  MOff.go = function (t) {
+    const from = this.tab, O = order(), dir = O.indexOf(t) >= O.indexOf(from) ? 1 : -1;
+    this._dir = dir;
+    const page = document.querySelector('.mo-page');
+    oldPage = null;
+    if (page && from !== t && !still() && strong) {
+      const r = page.getBoundingClientRect(), vh = innerHeight;
+      // only what is on screen travels out — the rest of a long list is dropped first (keeps the switch cheap)
+      const off = [...page.children].filter(c => c.getBoundingClientRect().top > vh);
+      oldPage = { el: page, r, dir, off };
+    }
+    keysBefore = null;                 // a tab change is not "rows came and went"
+    const out = go.apply(this, arguments);
+    if (oldPage && !oldPage.el.isConnected) {
+      const { el, r, off } = oldPage, g = el;
+      off.forEach(c => c.remove());
+      g.classList.remove('enter'); g.classList.add('mt-ghost');
+      Object.assign(g.style, { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: Math.max(0, innerHeight - r.top) + 'px' });
+      g.style.setProperty('--dx', (-dir * 28) + 'px');
+      document.body.append(g);
+      requestAnimationFrame(() => g.classList.add('out'));
+      setTimeout(() => g.remove(), 260);
+    }
+    oldPage = null;
+    return out;
+  };
+
+  /* ---------- after every phone render: read everything first, then write (one layout) ---------- */
+  const render = MOff.render;
+  MOff.render = function () {
+    const ind = document.querySelector('.mo-nav .mt-ind'), prevX = ind ? ind._x : null;
+    let before = null, leaving = [];
+    if (keysBefore !== null && !still()) {
+      before = snapRows();
+      const vh = innerHeight;
+      before.forEach((el, k) => { const r = el.getBoundingClientRect(); if (r.bottom > 0 && r.top < vh) leaving.push([k, el, r]); });
+    }
+    const out = render.apply(this, arguments);
+    try { after.call(this, prevX, before, leaving); } catch (e) { console.error('motion', e); }
+    keysBefore = true;
+    return out;
+  };
+
+  const NUMS = [['.mo-stk', '.v b.num'], ['.mo-banner.top', ':scope > div > b'], ['.mo-cats > *', 'i, b, em']];
+  function after(prevX, before, leaving) {
+    const page = document.querySelector('.mo-page'); if (!page) return;
+    const enter = page.classList.contains('enter'), anim = !still(), vh = innerHeight;
+    // ---- read
+    const nav = document.querySelector('.mo-nav'), on = nav && nav.querySelector('a.on');
+    const navX = on ? on.offsetLeft + on.offsetWidth / 2 - 14 : null;
+    const items = anim && enter ? [...page.querySelectorAll('.mo-li, .mo-parcel, .mo-sup, .mo-cats > *, .mo-h3')].slice(0, 24) : [];
+    const itemTop = items.map(el => el.getBoundingClientRect().top);
+    const bars = anim && enter ? [...page.querySelectorAll('.mo-lvl i')].slice(0, 14) : [];
+    const barTop = bars.map(el => el.getBoundingClientRect().top);
+    const sps = anim && enter ? [...page.querySelectorAll('.mo-sp')].slice(0, 10) : [];
+    const spTop = sps.map(el => el.getBoundingClientRect().top);
+    const first = enter && !seen.has(MOff.tab); if (enter) seen.add(MOff.tab);
+    const nums = [];
+    NUMS.forEach(([host, sel]) => page.querySelectorAll(host).forEach((h, idx) => {
+      const el = h.querySelector(sel); if (!el) return;
+      const m = /^([\d,]+(?:\.\d+)?)(.*)$/s.exec(el.textContent.trim()); if (!m) return;
+      nums.push([el, parseFloat(m[1].replace(/,/g, '')), m[2], host + ':' + (h.dataset.mat || h.dataset.tab || h.dataset.seg || idx)]);
+    }));
+    const numTop = anim ? nums.map(n => n[0].getBoundingClientRect().top) : [];
+    const now = before ? snapRows() : null;
+    // ---- write
+    if (enter) page.dataset.dir = (this._dir || 1) > 0 ? 'f' : 'b';
+    indicator(nav, on, navX, prevX);
+    nums.forEach(([el, to, tail, key], i) => {
+      const was = vals.get(key); vals.set(key, to);
+      if (!anim || numTop[i] > vh) return;
+      if (first && to > 0) count(el, 0, to, tail, 700);
+      else if (was !== undefined && was !== to) count(el, was, to, tail, 520, true);
+    });
+    if (!anim) return;
+    let k = 0;
+    items.forEach((el, i) => { if (itemTop[i] < vh && k < 8) { el.style.setProperty('--i', k++); el.classList.add('mt-in'); } });
+    bars.forEach((el, i) => { if (barTop[i] < vh) el.classList.add('mt-fill'); });
+    sps.forEach((el, i) => { if (spTop[i] < vh) el.classList.add('mt-draw'); });   // sparkline wipes in (GPU: transform only)
+    if (now) {
+      now.forEach((el, key) => { if (!before.has(key)) el.classList.add('mt-new'); });
+      leaving.forEach(([key, el, r]) => { if (!now.has(key)) leaveGhost(el, r); });
+    }
+  }
+
+  /* a card that just went away: its old node folds out where it was */
+  function leaveGhost(el, r) {
+    if (el.isConnected) return;
+    el.classList.add('mt-leave');
+    Object.assign(el.style, { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: r.height + 'px' });
+    document.body.append(el);
+    setTimeout(() => el.remove(), 380);
+  }
+
+  /* ---------- numbers ---------- */
+  function count(el, from, to, tail, ms, flash) {
+    const dec = (String(to).split('.')[1] || '').length, t0 = performance.now(), ease = x => 1 - Math.pow(1 - x, 4);
+    const fmt = v => v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    el.classList.add('mt-num'); if (flash) el.classList.add(to > from ? 'mt-up' : 'mt-down');
+    const step = now => {
+      if (!el.isConnected) return;
+      const p = Math.min(1, (now - t0) / ms);
+      el.textContent = fmt(from + (to - from) * ease(p)) + tail;
+      if (p < 1) requestAnimationFrame(step);
+    };
+    el.textContent = fmt(from) + tail;
+    requestAnimationFrame(step);
+  }
+
+  /* ---------- bottom bar: one indicator glides to the active tab ---------- */
+  function indicator(nav, on, x, prevX) {
+    if (!nav || !on) return;
+    nav.classList.add('mt-nav');
+    const ind = document.createElement('i'); ind.className = 'mt-ind'; ind._x = x;
+    if (prevX === null || prevX === undefined || prevX === x || still()) { ind.style.transform = `translateX(${x}px)`; nav.append(ind); return; }
+    ind.style.transform = `translateX(${prevX}px)`; nav.append(ind);
+    on.classList.add('mt-pop');
+    requestAnimationFrame(() => requestAnimationFrame(() => { ind.classList.add('go'); ind.style.transform = `translateX(${x}px)`; }));
+  }
+
+  /* ---------- swipe the page to change tab ---------- */
+  let sw = null;
+  document.addEventListener('touchstart', e => {
+    const p = e.target.closest && e.target.closest('.mo-page');
+    if (!p || e.touches.length !== 1 || document.querySelector('.mb-sheet.in')) { sw = null; return; }
+    let n = e.target, blocked = false;
+    while (n && n !== p) { if (/^(INPUT|TEXTAREA|SELECT)$/.test(n.tagName) || (n.scrollWidth > n.clientWidth + 4 && /auto|scroll/.test(getComputedStyle(n).overflowX))) { blocked = true; break; } n = n.parentElement; }
+    sw = blocked ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!sw) return; const s = sw; sw = null;
+    const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y;
+    if (Math.abs(dx) < 70 || Math.abs(dy) > 45 || Math.abs(dx) < Math.abs(dy) * 2 || Date.now() - s.t > 700) return;
+    const O = order(), i = O.indexOf(MOff.tab), j = i + (dx < 0 ? 1 : -1);
+    if (i < 0 || j < 0 || j >= O.length) return;
+    MOff.go(O[j]);
+  }, { passive: true });
+
+  /* ---------- bottom sheet: drag the handle down to close ---------- */
+  let dr = null;
+  document.addEventListener('touchstart', e => {
+    const sh = e.target.closest && e.target.closest('.mb-sheet.in'); if (!sh) return;
+    const onHandle = e.target.closest('.grab, .mb-sheet-h, .mo-sh-h');
+    if (!onHandle && sh.scrollTop > 0) return;
+    if (!onHandle && e.target.closest('input, textarea, select, button, a, label')) return;
+    dr = { sh, y: e.touches[0].clientY, dy: 0, t: Date.now() };
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!dr) return; dr.dy = Math.max(0, e.touches[0].clientY - dr.y);
+    if (dr.dy > 4) { dr.sh.style.transition = 'none'; dr.sh.style.transform = `translateY(${dr.dy}px)`; }
+  }, { passive: true });
+  document.addEventListener('touchend', () => {
+    if (!dr) return; const { sh, dy, t } = dr; dr = null;
+    sh.style.transition = ''; sh.style.transform = '';
+    const fast = dy > 40 && dy / Math.max(1, Date.now() - t) > 0.6;
+    if (dy > 110 || fast) { const s = sh.previousElementSibling; (s && s.classList.contains('mb-scrim') ? s : document.querySelector('.mb-scrim.in'))?.click(); }
+  }, { passive: true });
+
+  /* ---------- toasts: tag the kind so each one moves its own way ---------- */
+  if (typeof toast === 'function') {
+    const base = toast;
+    toast = function (t, e, s) {
+      const r = base.apply(this, arguments);
+      const L = document.querySelectorAll('.toast'), el = L[L.length - 1];
+      if (el) el.classList.add('t-' + (s || 'ok'));
+      return r;
+    };
+  }
 })();
 
