@@ -1072,8 +1072,12 @@ try {
   $base = $url.Split('?')[0]
   # full screen size (1920×1080 or whatever this screen is), opened maximized
   # the page itself fills the screen on open (?desk=1) — works with any display scaling
-  $appArgs = "--app=$($url.Split('?')[0])?desk=1 --start-maximized"
-  $wgArgs  = "--app=${base}?view=widget --window-size=380,640 --window-position=$wx,$wy"
+  # its own browser profile: the login stays even if the normal Edge is set to clear data when it closes
+  $prof = Join-Path $dir 'browser'
+  New-Item -ItemType Directory -Force $prof | Out-Null
+  $own = "--user-data-dir=`"$prof`" --no-first-run --no-default-browser-check"
+  $appArgs = "--app=$($url.Split('?')[0])?desk=1 --start-maximized $own"
+  $wgArgs  = "--app=${base}?view=widget --window-size=380,640 --window-position=$wx,$wy $own"
 
   $ws = New-Object -ComObject WScript.Shell
   function New-Lnk($path, $arguments, $desc) {
