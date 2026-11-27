@@ -428,4 +428,8 @@ html.net-wait input,html.net-wait textarea{cursor:text}
 .nm-hint{margin-top:6px;font-size:13px;font-weight:600;color:#B4232A}
 #rerr:not(:empty){display:block;padding:10px 12px;border-radius:10px;background:#FDECEC;color:#B4232A;font-size:13.5px;font-weight:600}
 @media (prefers-reduced-motion:reduce){#mname.nm-bad{animation:none}}
+.nm-pick{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.nm-pick button{height:34px;padding:0 14px;border-radius:10px;border:1.5px solid rgba(20,20,20,.16);background:#fff;font:inherit;font-size:13.5px;font-weight:600;color:#141414;cursor:pointer;touch-action:manipulation;transition:border-color .2s ease,background-color .2s ease}
+@media (hover:hover) and (pointer:fine){.nm-pick button:hover{border-color:#141414}}
+.nm-pick button:active{transform:scale(.97)}
 
