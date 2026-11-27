@@ -369,3 +369,7 @@ html.net-wait input,html.net-wait textarea{cursor:text}
 .mo .mo-sp.mt-draw{animation:mtDraw .6s var(--m-enter) both;animation-delay:calc(120ms - var(--e,0ms));transform-origin:left center}
 @keyframes mtDraw{from{opacity:0;transform:scaleX(.4)}}
 
+/* ===== patch 015-pc-window.css ===== */
+/* v3.80 · someone with no shift (class tx) — the avatar was picking up the text-column style and stretching into a long oval */
+.h-av.tx{flex:none!important;display:inline-grid!important;flex-direction:row;gap:0;min-width:0}
+
