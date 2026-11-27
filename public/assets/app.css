@@ -373,3 +373,51 @@ html.net-wait input,html.net-wait textarea{cursor:text}
 /* v3.80 · someone with no shift (class tx) — the avatar was picking up the text-column style and stretching into a long oval */
 .h-av.tx{flex:none!important;display:inline-grid!important;flex-direction:row;gap:0;min-width:0}
 
+/* ===== patch 016-device-pick.css ===== */
+/* v3.81 · first-run screen chooser */
+.dvp-lock,.dvp-lock body{overflow:hidden!important}
+#dv-pick{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px 16px;overflow:auto;
+  background:#F6F3EC;color:#141414;animation:dvp-in .28s cubic-bezier(.22,1,.36,1) both}
+@keyframes dvp-in{from{opacity:0}}
+#dv-pick .dvp-in{width:min(760px,100%);display:flex;flex-direction:column;align-items:center;text-align:center}
+#dv-pick .dvp-brand{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+#dv-pick .dvp-brand i{width:22px;height:22px;background:linear-gradient(#141414 0 0) 0 0/11px 22px no-repeat,linear-gradient(#FFC21A 0 0) 11px 11px/11px 11px no-repeat}
+#dv-pick .dvp-brand b{font-size:15px;font-weight:800;letter-spacing:.06em}
+#dv-pick h1{margin:0;font-size:30px;font-weight:800;line-height:1.25}
+#dv-pick h1 small{display:block;margin-top:4px;font-size:12px;font-weight:600;letter-spacing:.08em;color:#8A857A}
+#dv-pick .dvp-sub{margin:12px 0 28px;font-size:14px;color:#5E5A52}
+#dv-pick .dvp-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%}
+#dv-pick .dvp-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px 20px 20px;
+  font:inherit;color:inherit;text-align:center;cursor:pointer;background:#fff;border:1.5px solid rgba(20,20,20,.14);border-radius:20px;
+  transition:border-color .2s ease,background-color .2s ease,transform .16s cubic-bezier(.22,1,.36,1);touch-action:manipulation}
+#dv-pick .dvp-c.rec{border-color:#141414}
+@media (hover:hover) and (pointer:fine){#dv-pick .dvp-c:hover{border-color:#141414;background:#FFFCF2}}
+#dv-pick .dvp-c:active,#dv-pick .dvp-c.pick{transform:scale(.97);transition-duration:0s}
+#dv-pick .dvp-c:focus-visible{outline:3px solid #FFC21A;outline-offset:3px}
+#dv-pick .tag{position:absolute;top:12px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11.5px;font-weight:700;color:#141414;background:#FFC21A;padding:3px 10px;border-radius:8px}
+#dv-pick .art{width:104px;height:104px;display:grid;place-items:center;margin-top:10px;border-radius:24px;background:#F6F3EC}
+#dv-pick .art svg{width:72px;height:72px;fill:none;stroke:#141414;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+#dv-pick .art .f{fill:#FFC21A;stroke:none}
+#dv-pick .art .l{stroke:#B9B3A6}
+#dv-pick .nm b{display:block;font-size:22px;font-weight:800}
+#dv-pick .nm small{display:block;font-size:11.5px;font-weight:600;letter-spacing:.08em;color:#8A857A;margin-top:2px}
+#dv-pick .nt{font-size:13px;color:#5E5A52;line-height:1.45}
+#dv-pick .go{display:inline-flex;align-items:center;gap:6px;margin-top:4px;height:44px;padding:0 20px;border-radius:12px;font-weight:700;font-size:15px;
+  border:1.5px solid #141414;color:#141414;background:transparent}
+#dv-pick .rec .go{background:#141414;color:#fff}
+#dv-pick .go svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:560px){
+  #dv-pick{place-items:start center;padding-top:40px}
+  #dv-pick h1{font-size:25px}
+  #dv-pick .dvp-row{grid-template-columns:1fr;gap:12px}
+  #dv-pick .dvp-c{flex-direction:row;text-align:left;padding:18px 16px;gap:14px}
+  #dv-pick .tag{left:auto;right:12px;transform:none;top:-10px}
+  #dv-pick .art{width:72px;height:72px;margin:0;flex:none;border-radius:18px}
+  #dv-pick .art svg{width:52px;height:52px}
+  #dv-pick .nm{flex:1;min-width:0}
+  #dv-pick .nt,#dv-pick .go span{display:none}
+  #dv-pick .nt{display:none}
+  #dv-pick .go{padding:0 14px;height:44px;margin:0}
+}
+@media (prefers-reduced-motion:reduce){#dv-pick{animation:none}}
+
