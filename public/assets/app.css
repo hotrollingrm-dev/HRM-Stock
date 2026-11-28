@@ -433,3 +433,10 @@ html.net-wait input,html.net-wait textarea{cursor:text}
 @media (hover:hover) and (pointer:fine){.nm-pick button:hover{border-color:#141414}}
 .nm-pick button:active{transform:scale(.97)}
 
+/* ===== patch 020-ocean-glass.css ===== */
+/* v3.87 · คลื่นทะเล: soft glass-ribbon backdrop (assets/bg-ocean.svg) + clearer glass panels. เหลือง-ดำ unchanged */
+html[data-skin=ocean]{--bg:#E3EEF6;--skin-pat:url(/assets/bg-ocean.svg);--amb1:transparent;--amb2:transparent;--amb3:transparent;--amb4:transparent;
+  --glass-card:rgba(255,255,255,.5);--glass-strong:rgba(255,255,255,.66);--glass:rgba(255,255,255,.42);--card:rgba(255,255,255,.62);
+  --glass-line:rgba(255,255,255,.85);--glass-hi:#fff;--line:#CFE0EC;--skin-shadow:rgba(40,90,140,.12)}
+html[data-skin=ocean] body:after{background-size:cover;background-position:left top}
+

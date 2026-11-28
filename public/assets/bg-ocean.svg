@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BFDDF2"/><stop offset=".38" stop-color="#D6E8F5"/><stop offset=".72" stop-color="#E9F0F6"/><stop offset="1" stop-color="#F4F6F8"/></linearGradient>
+<radialGradient id="hz" cx=".82" cy=".72" r=".6"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".85"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+<radialGradient id="sh" cx=".1" cy=".05" r=".55"><stop offset="0" stop-color="#9CC9EA" stop-opacity=".7"/><stop offset="1" stop-color="#9CC9EA" stop-opacity="0"/></radialGradient>
+<linearGradient id="gf1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#CDE6F7"/><stop offset=".6" stop-color="#B3D6F0"/><stop offset="1" stop-color="#A2C9EA"/></linearGradient>
+<linearGradient id="gf2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DCEEFA"/><stop offset="1" stop-color="#B8D9F1"/></linearGradient>
+<linearGradient id="gf3" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#B9D9F0"/><stop offset="1" stop-color="#D8EAF6"/></linearGradient>
+<linearGradient id="ge" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/><stop offset=".45" stop-color="#E8F3FB" stop-opacity=".6"/><stop offset="1" stop-color="#FFFFFF" stop-opacity=".15"/></linearGradient>
+<filter id="soft"><feGaussianBlur stdDeviation="1.2"/></filter>
+<filter id="gr" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="5" result="n"/><feColorMatrix in="n" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .07 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="url(#bg)"/>
+<rect width="1920" height="1080" fill="url(#sh)"/>
+<g filter="url(#soft)">
+<g transform="rotate(-24 520 120)">
+<rect x="-230.0" y="-45.0" width="1500" height="330" rx="165.0" fill="url(#gf1)" opacity="0.55"/>
+<rect x="-230.0" y="-45.0" width="1500" height="330" rx="165.0" fill="none" stroke="url(#ge)" stroke-width="3"/>
+<rect x="-227.0" y="-42.0" width="1494" height="324" rx="162.0" fill="none" stroke="#7FA6CF" stroke-opacity=".55" stroke-width="1.6"/>
+<path d="M-65.0 283.0 H1055.5" stroke="#fff" stroke-opacity=".9" stroke-width="2.4" stroke-linecap="round"/>
+</g>
+<g transform="rotate(-24 760 330)">
+<rect x="-40.0" y="180.0" width="1600" height="300" rx="150.0" fill="url(#gf2)" opacity="0.42"/>
+<rect x="-40.0" y="180.0" width="1600" height="300" rx="150.0" fill="none" stroke="url(#ge)" stroke-width="3"/>
+<rect x="-37.0" y="183.0" width="1594" height="294" rx="147.0" fill="none" stroke="#7FA6CF" stroke-opacity=".55" stroke-width="1.6"/>
+<path d="M110.0 478.0 H1365.0" stroke="#fff" stroke-opacity=".9" stroke-width="2.4" stroke-linecap="round"/>
+</g>
+<g transform="rotate(32 -40 930)">
+<rect x="-350.0" y="490.0" width="620" height="880" rx="440.0" fill="url(#gf3)" opacity="0.5"/>
+<rect x="-350.0" y="490.0" width="620" height="880" rx="440.0" fill="none" stroke="url(#ge)" stroke-width="3"/>
+<rect x="-347.0" y="493.0" width="614" height="874" rx="437.0" fill="none" stroke="#7FA6CF" stroke-opacity=".55" stroke-width="1.6"/>
+<path d="M90.0 1368.0 H-302.0" stroke="#fff" stroke-opacity=".9" stroke-width="2.4" stroke-linecap="round"/>
+</g>
+</g>
+<rect width="1920" height="1080" fill="url(#hz)"/>
+<rect width="1920" height="1080" filter="url(#gr)"/>
+</svg>
